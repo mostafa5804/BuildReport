@@ -3,8 +3,8 @@ name: Android CI/CD & Auto Release 🚀
 on:
   push:
     tags:
-      - 'v*' # زمانی که تگی مانند v1.0.0 پش شود، این ورک‌فلو اجرا می‌شود.
-  workflow_dispatch: # امکان اجرای دستی ورک‌فلو از بخش Actions در گیت‌هاب
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -25,25 +25,20 @@ jobs:
       - name: Grant Execute Permission to Gradlew 🔑
         run: chmod +x gradlew
 
-      # کامپایل و خروجی گرفتن نسخه Release (فایل‌های APK و AAB)
-      - name: Build Release APK & Bundle (AAB) 🛠️
+      # بازگرداندن فایل Keystore از Base64
+      - name: Decode Keystore 🔐
+        run: |
+          echo "${{ secrets.SIGNING_KEY }}" | base64 --decode > app/keystore.jks
+
+      # کامپایل و امضای خودکار
+      - name: Build Release APK & Bundle 🛠️
         run: ./gradlew assembleRelease bundleRelease --stacktrace
+        env:
+          STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
-      # امضای آپ‌های خروجی (اختیاری - اگر مایلید اپ نسخه رسمی و امضا شده باشد)
-      # اگر سکرت‌های مربوط به KeyStore را در بخش Secrets گیت‌هاب ست نکرده باشید، این بخش موقتاً با هشدار رد می‌شود 
-      # یا می‌توانید از خروجی غیرامضا شده (Unsigned) برای تست مستقیم استفاده کنید.
-      - name: Sign APK (Optional) ✍️
-        id: sign_app
-        uses: r0adrunner/sign-android-release@v1
-        continue-on-error: true
-        with:
-          releaseDirectory: app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-          alias: ${{ secrets.KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
-
-      # ایجاد نسخه ریلیز خودکار در ریپازیتوری گیت‌هاب و آپلود فایل‌ها
+      # ایجاد ریلیز در گیت‌هاب
       - name: Create GitHub Release 📦
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
