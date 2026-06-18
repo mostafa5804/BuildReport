@@ -21,26 +21,24 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
+      - name: Decode Keystore 🔐
+        run: |
+          echo "${{ secrets.SIGNING_KEY }}" | base64 --decode > app/keystore.jks
+
       - name: Setup Gradle & Build Release 🛠️
         uses: gradle/actions/setup-gradle@v3
         with:
           arguments: :app:assembleRelease :app:bundleRelease
-
-      - name: Sign APK & AAB ✍️
-        uses: r0adrunner/sign-android-release@v1.1.5
-        with:
-          releaseDirectory: app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-          alias: ${{ secrets.KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        env:
+          STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Create GitHub Release 📦
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            app/build/outputs/apk/release/*-signed.apk
             app/build/outputs/apk/release/*.apk
             app/build/outputs/bundle/release/*.aab
           draft: false
