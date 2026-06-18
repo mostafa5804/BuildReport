@@ -3,54 +3,100 @@ name: Android CI/CD & Auto Release 🚀
 on:
   push:
     tags:
-      - 'v*' # زمانی که تگی مانند v1.0.0 پوش شود، اجرا می‌شود
-  workflow_dispatch: # امکان اجرای دستی مستقیم از پنل
+      - 'v*' # Triggers workflow when pushing a tag like v1.0.0
+  workflow_dispatch: # Allows manual trigger from the GitHub Actions tab
 
 jobs:
   build:
-    name: Build & Release App
+    name: Build & Release Android App
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write # Required for creating GitHub Releases
 
     steps:
       - name: Checkout Code 📂
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17 ☕
+      - name: Set up JDK 21 ☕
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17'
+          java-version: '21'
+          cache: 'gradle'
 
-      # حل مشکل نبود فایل Wrapper محلی؛ دانلود مستقیم گریدل نسخه دات‌نت ۹.۳.۱ سازگار با پروژه شما
-      - name: Setup Gradle 9.3.1 🛠️
+      - name: Make Gradle Wrapper Executable 🔑
+        run: chmod +x gradlew
+
+      - name: Setup Gradle ⚙️
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '9.3.1'
+          gradle-version: '9.3.1' # Fully compatible with AGP 9.1.1!
 
-      # گرفتن خروجی نهایی بدون وابستگی به فایلی که در گیت ذخیره نشده بود
-      - name: Build Release APK & Bundle (AAB) 📦
-        run: gradle assembleRelease bundleRelease --stacktrace
+      - name: Build Release APK & Bundle (AAB) 🛠️
+        run: ./gradlew assembleRelease bundleRelease --stacktrace
 
-      # امضای امن و رسمی بدون نیاز به ماژول‌های متفرقه (با استفاده از پکیج رسمی گوگل/اندروید)
-      - name: Sign Release APK ✍️
-        if: env.HAS_SIGNING == 'true'
-        uses: r0adrunner/sign-android-release@v1
+      - name: Sign APK & AAB natively ✍️
+        run: |
+          if [ -n "${{ secrets.SIGNING_KEY }}" ]; then
+            echo "Signing key detected. Decrypting keystore file..."
+            echo "${{ secrets.SIGNING_KEY }}" | base64 -d > release.keystore
+            
+            # 1. Sign Release APK using standard Android SDK apksigner
+            echo "Locating apksigner tool..."
+            BUILD_TOOLS_VERSION=$(ls -1 "$ANDROID_HOME/build-tools" | sort -V | tail -n 1)
+            APKSIGNER="$ANDROID_HOME/build-tools/$BUILD_TOOLS_VERSION/apksigner"
+            echo "Using apksigner version in $BUILD_TOOLS_VERSION"
+            
+            UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*.apk" -not -name "*signed*")
+            if [ -n "$UNSIGNED_APK" ] && [ -f "$UNSIGNED_APK" ]; then
+              echo "Signing APK: $UNSIGNED_APK"
+              $APKSIGNER sign --ks release.keystore \
+                --ks-key-alias "${{ secrets.KEY_ALIAS }}" \
+                --ks-pass pass:"${{ secrets.KEY_STORE_PASSWORD }}" \
+                --key-pass pass:"${{ secrets.KEY_PASSWORD }}" \
+                --out app/build/outputs/apk/release/BuildReportYar-release-signed.apk \
+                "$UNSIGNED_APK"
+              echo "Successfully signed custom APK."
+            else
+              echo "No unsigned APK found or signed APK already exists."
+            fi
+            
+            # 2. Sign App Bundle (AAB) using native Oracle jarsigner from JDK
+            AAB_FILE=$(find app/build/outputs/bundle/release -name "*.aab")
+            if [ -n "$AAB_FILE" ] && [ -f "$AAB_FILE" ]; then
+              echo "Signing App Bundle (AAB): $AAB_FILE"
+              jarsigner -keystore release.keystore \
+                -storepass "${{ secrets.KEY_STORE_PASSWORD }}" \
+                -keypass "${{ secrets.KEY_PASSWORD }}" \
+                "$AAB_FILE" \
+                "${{ secrets.KEY_ALIAS }}"
+              mv "$AAB_FILE" app/build/outputs/bundle/release/BuildReportYar-release-signed.aab
+              echo "Successfully signed and renamed custom AAB."
+            fi
+            
+            # Clean up the key store file so it does not persist
+            rm -f release.keystore
+          else
+            echo "⚠️ SIGNING_KEY secret is not provided. Skipping signature steps. The outputs will remain unsigned."
+          fi
+
+      - name: Upload Build Artifacts to Actions Tab 📥
+        uses: actions/upload-artifact@v4
         with:
-          releaseDirectory: app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-          alias: ${{ secrets.KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
-        env:
-          HAS_SIGNING: ${{ secrets.SIGNING_KEY != '' }}
+          name: BuildReportYar-Release-Outputs
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab
+          if-no-files-found: warn
 
-      # انتشار نهایی فایل‌های کامپایل شده در گیت‌هاب
-      - name: Create GitHub Release ✨
+      - name: Create GitHub Release 📦
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/release/*signed*.apk
+            app/build/outputs/apk/release/*unsigned*.apk
             app/build/outputs/bundle/release/*.aab
           draft: false
           prerelease: false
