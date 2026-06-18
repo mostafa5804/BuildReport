@@ -4778,6 +4778,52 @@ fun ProjectDashboardTab(reportsCount: Int, reports: List<com.example.data.model.
         mutableStateOf(viewModel.sharedPreferences.getString("dashboard_tomorrow_forecast", "") ?: "")
     }
 
+    val generatedRecentActivities = remember(reports) {
+        if (reports.isEmpty()) "" else {
+            val sb = StringBuilder()
+            val lastReports = reports.take(2)
+            lastReports.forEachIndexed { idx, report ->
+                val typeStr = if (report.reportType == "WAREHOUSE") "انبار" else "اجرا"
+                sb.append("📋 گزارش $typeStr مورخ ${report.date}:\n")
+                if (report.tasks.isEmpty() && report.materials.isEmpty()) {
+                    sb.append("• موردی ثبت نشده است\n")
+                } else {
+                    if (report.reportType == "WAREHOUSE") {
+                        val matExits = report.materials.filter { it.isExit }.take(3)
+                        val matEntries = report.materials.filter { !it.isExit }.take(3)
+                        if (matEntries.isNotEmpty()) {
+                            sb.append("   📥 ورود کالا: ${matEntries.joinToString("، ") { "${it.type} (${it.count} ${it.unit})" }}\n")
+                        }
+                        if (matExits.isNotEmpty()) {
+                            sb.append("   📤 خروج کالا: ${matExits.joinToString("، ") { "${it.type} (${it.count} ${it.unit})" }}\n")
+                        }
+                    } else {
+                        report.tasks.take(4).forEach { task ->
+                            val kmStr = if (task.startKm.isNotEmpty() || task.endKm.isNotEmpty()) {
+                                " (کیلومتر ${task.startKm} الی ${task.endKm})"
+                            } else ""
+                            sb.append("   • ${task.description}$kmStr\n")
+                        }
+                    }
+                }
+                if (idx < lastReports.size - 1) sb.append("\n")
+            }
+            sb.toString().trim()
+        }
+    }
+
+    val generatedTomorrowForecast = remember(reports) {
+        val latestPlanReport = reports.firstOrNull { it.tomorrowPlan.trim().isNotEmpty() }
+        if (latestPlanReport != null) {
+            "🔮 برنامه فردا انتقال‌یافته از گزارش قبلی (${latestPlanReport.date}):\n${latestPlanReport.tomorrowPlan}"
+        } else {
+            ""
+        }
+    }
+
+    val displayRecent = recentActivities.ifEmpty { generatedRecentActivities }
+    val displayForecast = tomorrowForecast.ifEmpty { generatedTomorrowForecast }
+
     var showEditSummaryDialog by remember { mutableStateOf(false) }
     var tempSummaryText by remember { mutableStateOf("") }
     var summaryEditType by remember { mutableStateOf("RECENT") } // "RECENT" or "FORECAST"
@@ -4796,25 +4842,47 @@ fun ProjectDashboardTab(reportsCount: Int, reports: List<com.example.data.model.
                 )
             },
             text = {
-                OutlinedTextField(
-                    value = tempSummaryText,
-                    onValueChange = { tempSummaryText = it },
-                    placeholder = {
-                        Text(
-                            text = if (summaryEditType == "RECENT") "خلاصه عملیات خاکی، بتن‌ریزی یا پیشرفت روزهای اخیر..."
-                                   else "پیاده‌سازی نقاط Km20، بررسی توافق‌نامه با معارضین جاده، کارهای اجرایی..."
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    val smartVal = if (summaryEditType == "RECENT") generatedRecentActivities else generatedTomorrowForecast
+                    if (smartVal.isNotEmpty()) {
+                        Button(
+                            onClick = { tempSummaryText = smartVal },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = "درج", modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("درج پیشنهاد خودکار از ۲ روز قبل 🪄", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = tempSummaryText,
+                        onValueChange = { tempSummaryText = it },
+                        placeholder = {
+                            Text(
+                                text = if (summaryEditType == "RECENT") "خلاصه عملیات خاکی، بتن‌ریزی یا پیشرفت روزهای اخیر..."
+                                       else "پیاده‌سازی نقاط Km20، بررسی توافق‌نامه با معارضین جاده، کارهای اجرایی..."
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(150.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = false,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Text,
+                            imeAction = ImeAction.None
                         )
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(150.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = false,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Text,
-                        imeAction = ImeAction.None
                     )
-                )
+                }
             },
             confirmButton = {
                 Button(
@@ -4934,10 +5002,25 @@ fun ProjectDashboardTab(reportsCount: Int, reports: List<com.example.data.model.
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
+                        if (recentActivities.isEmpty() && generatedRecentActivities.isNotEmpty()) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Surface(
+                                color = MaterialTheme.colorScheme.tertiaryContainer,
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    text = "پیشنهاد هوشمند گزارش‌های قبلی ✨",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
                         Spacer(modifier = Modifier.weight(1f))
                         TextButton(
                             onClick = {
-                                tempSummaryText = recentActivities
+                                tempSummaryText = recentActivities.ifEmpty { generatedRecentActivities }
                                 summaryEditType = "RECENT"
                                 showEditSummaryDialog = true
                             },
@@ -4951,9 +5034,9 @@ fun ProjectDashboardTab(reportsCount: Int, reports: List<com.example.data.model.
                         }
                     }
                     Text(
-                        text = recentActivities.ifEmpty { "هنوز هیچ خلاصه فعالیتی برای کارگاه ثبت نگردیده است. با فشردن دکمه ویرایش می‌توانید آن را بنویسید ✍️" },
+                        text = displayRecent.ifEmpty { "هنوز هیچ خلاصه فعالیتی برای کارگاه ثبت نگردیده است. با فشردن دکمه ویرایش می‌توانید آن را بنویسید ✍️" },
                         fontSize = 11.5.sp,
-                        color = if (recentActivities.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (displayRecent.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 18.sp,
                         modifier = Modifier.padding(horizontal = 12.dp)
                     )
@@ -4978,10 +5061,25 @@ fun ProjectDashboardTab(reportsCount: Int, reports: List<com.example.data.model.
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
+                        if (tomorrowForecast.isEmpty() && generatedTomorrowForecast.isNotEmpty()) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Surface(
+                                color = MaterialTheme.colorScheme.tertiaryContainer,
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    text = "پیش‌بینی خودکار گزارش قبلی 🔮",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
                         Spacer(modifier = Modifier.weight(1f))
                         TextButton(
                             onClick = {
-                                tempSummaryText = tomorrowForecast
+                                tempSummaryText = tomorrowForecast.ifEmpty { generatedTomorrowForecast }
                                 summaryEditType = "FORECAST"
                                 showEditSummaryDialog = true
                             },
@@ -4995,9 +5093,9 @@ fun ProjectDashboardTab(reportsCount: Int, reports: List<com.example.data.model.
                         }
                     }
                     Text(
-                        text = tomorrowForecast.ifEmpty { "هنوز هیچ پیش‌بینی فعالیتی برای روز آینده ثبت نگردیده است. با فشردن دکمه ویرایش می‌توانید آن را بنویسید ✍️" },
+                        text = displayForecast.ifEmpty { "هنوز هیچ پیش‌بینی فعالیتی برای روز آینده ثبت نگردیده است. با فشردن دکمه ویرایش می‌توانید آن را بنویسید ✍️" },
                         fontSize = 11.5.sp,
-                        color = if (tomorrowForecast.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (displayForecast.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 18.sp,
                         modifier = Modifier.padding(horizontal = 12.dp)
                     )

@@ -1,74 +1,71 @@
-# BuildReportYar - سامانه گزارش یار کارگاه 🏗️📝
+# سامانه گزارش یار کارگاه (BuildReportYar) 🏗️📝
 
-An offline-first, professional daily reporting & monitoring assistant for construction, infrastructure, Civil Engineering, and warehouse management. Built entirely using modern Android technologies (Jetpack Compose, Room DB, Material Design 3, and PDF Generation).
-
-یک ابزار آفلاین، مدرن و مهندسی برای ثبت، مدیریت و تولید گزارش‌های روزانه کارگاه‌های ساختمانی، عمرانی و فیلد راهسازی همراه با خروجی استاندارد PDF و قابلیت‌های هوشمند ثبت داده‌ها.
+«گزارش‌یار کارگاه» یک دستیار حرفه‌ای، هوشمند و کاملاً آفلاین برای ثبت، مدیریت و تولید گزارش‌های روزانه کارگاه‌های عمرانی، راهسازی، ساختمانی و انبارداری است. این اپلیکیشن با تکیه بر تکنولوژی‌های مدرن اندروید توسعه یافته و فرمت‌های مهندسی و محاسبات فنی را کاملاً منطبق بر نیازهای کارگاه بومی‌سازی کرده است.
 
 ---
 
-## 🚀 Key Features | قابلیت‌های کلیدی
+## 🚀 قابلیت‌های کلیدی و برجسته برنامه
 
-### 🔹 Intelligent Station & Kilometer Formatting (فرمت هوشمند کیلومتراژ)
-* **Automatic Detection**: Easily key in mileage values like `250` or `30`, and the app automatically pads and converts them to standard road-construction format (e.g., `0+250` or `0+030`).
-* **Format Conversion**: Converts raw numbers or partial stationing seamlessly into standard $K+M$ format.
-* **Smart PDF Rendering**: Displays ranges in the precise visual order side-by-side (`14+500 الی 14+650`) without character-flapping or RTL truncation problems, using specialized HTML inline direction handlers.
+### ۱. فرمت‌دهی هوشمند متراژ و کیلومتراژ (Stationing & Mileage)
+* **تشخیص و تکمیل خودکار**: اگر عددی مانند `250` یا `30` را به عنوان متراژ وارد کنید، سیستم به صورت هوشمند آن را به قالب استاندارد راهسازی تبدیل می‌کند (مثال: `0+250` یا `0+030`).
+* **مدیریت فواصل چندگانه‌**: تبدیل یکپارچه تمامی اعداد خام وارد شده به فرمت استاندارد مهندسی $K+M$ بدون نیاز به تایپ کاراکترهای اضافه.
+* **حل مشکل جابجایی کاراکتر در PDF**: نمایش کاملاً استاندارد و خوانای بازه‌های کیلومتراژ (مانند `14+500 الی 14+650`) با ساختاری مستقل از جهت‌گیری متن (LIR/RTL) با استفاده از نگاشت تگ‌های HTML در موتور خروجی.
 
-### ✍️ Hand-Off Ready PDF Reports (خروجی رسمی PDF)
-* Generates standardized, visually stunning PDF reports offline.
-* Support for uploading and burning **Electronic Signatures (امضای الکترونیک)** onto the sheets instantly.
-* Weather integration, mileage, activity logs, machinery delays, workforce categories, and warehouse logs directly exported to highly polished tables.
+### ۲. خروجی رسمی و شکیل PDF کارگاهی
+* تولید آفلاین سند گزارش روزانه با الگوهای بصری بسیار منظم و جدولی.
+* قابلیت افزودن دکمه‌ها و آپلود مستقیم **امضای الکترونیک** کارشناس یا سرپرست کارگاه روی قالب اصلی گزارش.
+* جدول‌بندی منظم فعالیت‌ها، تاخیرات ماشین‌آلات صنعتی، پرسنل فعال روزانه به تفکیک رده، مصالح وارده به کارگاه و اطلاعات جوی هوا.
 
-### 📱 Responsive Material 3 Interface (رابط کاربری مدرن متریال ۳)
-* Visual KPIs on a dedicated dashboard featuring daily averages and activity breakdowns.
-* Beautiful adaptive columns, customized RTL flows, and localized Persian typography.
-* Zero-scrolling "About" panel optimized for standard mobile screen sizes.
+### ۳. پنل داشبورد با خلاصه هوشمند کارها (Smart Sync)
+* **استخراج خودکار گزارش‌های اخیر (۲ روز گذشته)**: داشبورد برنامه می‌تواند آخرین تسک‌ها و فعالیت‌های ثبت شده در ۲ روز قبل را به همراه خروجی و ورودی مصالح، به صورت هوشمند ترکیب و نمایش دهد.
+* **انتقال برنامه و پیش‌بینی روز آینده**: نمایش خودکار برنامه پیش‌بینی شده در گزارشِ قبلی برای فعالیت‌های امروز.
+* **حفظ کنترل دستی**: امکان ویرایش دستی و تغییر تمام متون پیشنهادی هوشمند و ذخیره آن‌ها در بانک اطلاعاتی.
 
-### 🛡️ Secure & Offline-First (کاملاً آفلاین و امن)
-* **Room SQLite database** guarantees offline data protection.
-* Secure backup system to export/import reports via encrypted JSON directly to email or local storage.
-* Zero external backend dependency, keeping your project and structural data completely confidential.
-
----
-
-## 🛠️ Built With | تکنولوژی‌ها
-
-* **Language**: Kotlin 1.9+
-* **UI Toolkit**: Jetpack Compose (Material Design 3 Components)
-* **Database**: SQLite powered by Room DB
-* **Navigation**: Type-safe Jetpack Navigation Compose
-* **Document Engine**: Custom Android WebKit-based offline PDF engine
-* **Threading**: Kotlin Coroutines & StateFlow
+### ۴. معماری کاملاً آفلاین و امن (Offline-First)
+* پایگاه داده محلی **Room Database (SQLite)** امنیت کامل داده‌های پروژه را تضمین کرده و از ارتباط اینترنتی برای کار بی‌نیاز است.
+* سیستم بک‌آپ پویا و ایمن جهت خروجی گرفتن و بازیابی کل اطلاعات کارگاه به صورت فایل رمزگذاری‌شده JSON.
+* بدون وابستگی به هیچ سرور خارجی، که امنیت و محرمانگی داده‌های حساس ساختاری شما را کاملاً حفظ می‌کند.
 
 ---
 
-## 📖 Persian Overview | راهنمای فارسی سیستم
+## 🛠️ تکنولوژی‌های مورد استفاده
 
-### بخش‌های اصلی برنامه
-1. **داشبورد هوشمند (Dashboard)**: نمایه گرافیکی و آماری برای مشاهده میانگین پرسنل فعال روزانه، مصالح تایید شده، و کاراکتر کلی عملکرد.
-2. **برگه ثبت گزارش جدید**: ثبت دقیق پرسنل کار و حضور غیاب، مصالح وارده/صادره، ماشین آلات فنی فعال یا کالیبره، و فعالیت‌های موضعی (کیلومتراژ جاده یا ابنیه فنی).
-3. **آرشیو و جستجو**: جستجو سریع بر اساس تاریخ، وضعیت تایید، نام استادکار یا نوع متریال با فیلترگذاری پویا.
-4. **درباره برنامه**: صفحه سبک و ساده مجهز به راه ارتباطی سریع با پشتیبانی و نسخه جاری پروژه بدون شلوغی و نیاز به اسکرول.
+* **زبان برنامه‌نویسی**: Kotlin (کاتلین) نسخه ۱.۹ به بالا
+* **رابط کاربری**: Jetpack Compose به همراه پیاده‌سازی کامل Material Design 3
+* **پایگاه داده**: Room Database برای پایداری داده‌ها
+* **ناوبری**: Jetpack Navigation Compose به صورت کاملاً تایپ ایمن (Type-Safe)
+* **موتور تولید سند**: موتور آفلاین مبتنی بر WebKit اندروید برای خروجی باکیفیت و بدون نقص PDF
+* **همزمانی**: Kotlin Coroutines و استفاده از StateFlow/SharedFlow برای مدیریت زنده وضعیت‌ها
 
 ---
 
-## 📦 How To Build & Install | راهنمای کامپایل پروژه
+## 📖 راهنمای بخش‌های اصلی نرم‌افزار
 
-To build your own version of **BuildReportYar**, follow these simple steps:
+۱. **صفحه داشبورد کارگاه (Dashboard)**: بررسی نمودارهای آماری، میانگین نیروی کار روزانه، وضعیت ماشین‌آلات فعال، خلاصه وضعیت هوشمند و ثبت یادآوری‌ها.
+۲. **مدیریت گزارش‌های روزانه**: ثبت پرسنل فعال کارگاه به تفکیک شرکت یا پیمانکار دسته دوم، ورود و خروج متریال و ادوات با ذکر زمان، موانع اجرایی و تعطیلی کارگاه، پیش‌بینی وضعیت آب‌وهوا.
+۳. **آرشیو و فیلترینگ**: جستجوی بسیار سریع و عمیق گزارشات ثبت شده بر اساس تاریخ شمسی، پرسنل کار، نوع متریال و وضعیت تایید گزارش.
+۴. **درباره ما و تماس**: صفحه‌ای سبک بر مبنای استانداردهای مدرن با دسترسی مستقیم و آسان به راه‌های ارتباطی ایمیل سازنده، جهت ثبت پیشنهادات و پشتیبانی کاربران.
 
-1. Clone this repository:
+---
+
+## 📦 نحوه کامپایل و راه‌اندازی پروژه
+
+این اپلیکیشن مستقیماً در نرم‌افزار اندروید استودیو قابل کامپایل و خروجی گرفتن است:
+
+۱. مخزن پروژه را کلون کنید:
    ```bash
    git clone https://github.com/yourusername/BuildReportYar.git
    ```
-2. Open the project root folder inside **Android Studio (Hedgehog or higher)**.
-3. Wait for the Gradle sync to finish successfully.
-4. Run standard build or assemble release:
+۲. پوشه ریشه پروژه را در نرم‌افزار **Android Studio (نسخه Hedgehog یا بالاتر)** باز کنید.
+۳. منتظر بمانید تا عملیات هماهنگ‌سازی (Gradle Sync) با موفقیت به پایان برسد.
+۴. جهت گرفتن نسخه آزمایشی دستور زیر را اجرا کنید یا دکمه Run را لمس نمایید:
    ```bash
    ./gradlew assembleDebug
    ```
 
 ---
 
-## ✉️ Feedback & Contact | ارتباط با ما
+## ✉️ ارتباط با توسعه‌دهنده و پیشنهادات
 
-We're always excited to improve BuildReportYar! If you have any suggestions, bug reports, or build feedbacks, please feel free to send an email to:
-* **Developer Email**: `mostafa5804@gmail.com`
+ما همواره مشتاق شنیدن نظرات شما، گزارش باگ‌ها و افزودن ویژگی‌های درخواستی شما برای کارآمدتر شدن «گزارش‌یار کارگاه» هستیم.
+* **ایمیل پشتیبانی و توسعه**: `mostafa5804@gmail.com`
