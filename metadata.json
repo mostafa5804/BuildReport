@@ -1,0 +1,6 @@
+{
+  "name": "سامانه گزارش یار کارگاه",
+  "description": "نرم‌افزار مدیریت و تولید گزارش‌های روزانه کارگاه‌های ساختمانی و عمرانی ویژه مهندسان با قابلیت خروجی PDF و اشتراک‌گذاری",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
