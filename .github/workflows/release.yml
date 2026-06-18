@@ -1,14 +1,14 @@
-name: Build & Release Android App 🚀
+name: Android CI/CD & Auto Release 🚀
 
 on:
   push:
     tags:
-      - 'v*' # زمانی که تگی مانند v1.0.0 پش شود، بیلد و نسخه جدید خودکار پابلیش می‌شود
-  workflow_dispatch: # امکان اجرای دستی ورک‌فلو از بخش Actions در گیت‌هاب وجود دارد
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
   build:
-    name: Build & Production Release
+    name: Build & Release Android App
     runs-on: ubuntu-latest
 
     steps:
@@ -21,22 +21,13 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      # استفاده از اکشن رسمی گریدل که خودش گریدل سیستمی را تنظیم می‌کند و نیازی به فایل gradlew ندارد!
-      - name: Setup Gradle 🛠️
+      - name: Setup Gradle & Build Release 🛠️
         uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: '8.2' 
+          arguments: :app:assembleRelease :app:bundleRelease
 
-      # کامپایل و خروجی گرفتن نسخه آماده با ابزار گریدل
-      - name: Build Release APK & Bundle (AAB) 🛠️
-        run: |
-          gradle :app:assembleRelease :app:bundleRelease --stacktrace
-
-      # امضای آپ‌های خروجی با متغیرهای محیطی گیت‌هاب
       - name: Sign APK & AAB ✍️
-        id: sign_app
-        uses: r0adrunner/sign-android-release@v1.0.4
-        continue-on-error: true
+        uses: r0adrunner/sign-android-release@v1.1.5
         with:
           releaseDirectory: app/build/outputs/apk/release
           signingKeyBase64: ${{ secrets.SIGNING_KEY }}
@@ -44,21 +35,12 @@ jobs:
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
 
-      # آپلود فایل‌ها به عنوان آرشیو بیلد گیت‌هاب
-      - name: Upload Artifacts 📤
-        uses: actions/upload-artifact@v4
-        with:
-          name: Build-Outputs
-          path: |
-            app/build/outputs/apk/release/*.apk
-            app/build/outputs/bundle/release/*.aab
-
-      # ثبت رسمی ریلیز جدید در بخش Releases گیت‌هاب شما و پیوست فایل APK به آن
       - name: Create GitHub Release 📦
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
+            app/build/outputs/apk/release/*-signed.apk
             app/build/outputs/apk/release/*.apk
             app/build/outputs/bundle/release/*.aab
           draft: false
