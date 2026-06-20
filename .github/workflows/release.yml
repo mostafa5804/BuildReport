@@ -42,9 +42,11 @@ jobs:
             exit 1
           fi
 
-      # ۲. اجرای بیلد و تزریق متغیرها به گریدل
+      # ۲. اجرای بیلد و تزریق متغیرها به گریدل (به همراه دادن مجوز اجرا)
       - name: Build & Auto Sign App 🛠️
-        run: ./gradlew assembleDebug assembleRelease bundleRelease --stacktrace
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug assembleRelease bundleRelease --stacktrace
         env:
           KEYSTORE_PATH: "release.keystore"
           KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
