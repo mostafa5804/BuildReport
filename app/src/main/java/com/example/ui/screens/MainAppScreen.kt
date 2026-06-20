@@ -267,7 +267,13 @@ fun MainAppScreen(
                             }
                             Text(
                                 text = if (currentScreen is ActiveScreen.ReportEditor) {
-                                    if (currentReport?.reportType == "WAREHOUSE") "ویرایش گزارش انبار" else "ویرایش گزارش اجرا"
+                                    when (currentReport?.reportType) {
+                                        "WAREHOUSE" -> "ویرایش گزارش انبار"
+                                        "LEGAL" -> "ویرایش گزارش حقوقی"
+                                        "SURVEY" -> "ویرایش گزارش نقشه‌برداری"
+                                        "TECHNICAL" -> "ویرایش گزارش دفتر فنی"
+                                        else -> "ویرایش گزارش اجرا"
+                                    }
                                 } else {
                                     "سامانه گزارش یار کارگاه"
                                 },
@@ -403,16 +409,46 @@ fun MainAppScreen(
                                     },
                                     onRequestCreate = {
                                         val defType = viewModel.sharedPreferences.getString("default_report_type", "ASK") ?: "ASK"
-                                        if (defType == "EXECUTION") {
-                                            viewModel.startNewReport("EXECUTION")
-                                            currentScreen = ActiveScreen.ReportEditor
-                                            Toast.makeText(context, "گزارش فنی و اجرایی جدید ساخته شد 📝", Toast.LENGTH_SHORT).show()
-                                        } else if (defType == "WAREHOUSE") {
-                                            viewModel.startNewReport("WAREHOUSE")
-                                            currentScreen = ActiveScreen.ReportEditor
-                                            Toast.makeText(context, "گزارش انبار جدید ساخته شد 📦", Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            showCreateTypeDialog = true
+                                        when (defType) {
+                                            "EXECUTION" -> {
+                                                viewModel.startNewReport("EXECUTION")
+                                                currentScreen = ActiveScreen.ReportEditor
+                                                Toast.makeText(context, "گزارش فنی و اجرایی جدید ساخته شد 📝", Toast.LENGTH_SHORT).show()
+                                            }
+                                            "WAREHOUSE" -> {
+                                                viewModel.startNewReport("WAREHOUSE")
+                                                currentScreen = ActiveScreen.ReportEditor
+                                                Toast.makeText(context, "گزارش انبار جدید ساخته شد 📦", Toast.LENGTH_SHORT).show()
+                                            }
+                                            "LEGAL" -> {
+                                                viewModel.startNewReport("LEGAL")
+                                                currentScreen = ActiveScreen.ReportEditor
+                                                Toast.makeText(context, "گزارش حقوقی و تملک جدید ساخته شد ⚖️", Toast.LENGTH_SHORT).show()
+                                            }
+                                            "SURVEY" -> {
+                                                viewModel.startNewReport("SURVEY")
+                                                currentScreen = ActiveScreen.ReportEditor
+                                                Toast.makeText(context, "گزارش نقشه‌برداری جدید ساخته شد 🧭", Toast.LENGTH_SHORT).show()
+                                            }
+                                            "TECHNICAL" -> {
+                                                viewModel.startNewReport("TECHNICAL")
+                                                currentScreen = ActiveScreen.ReportEditor
+                                                Toast.makeText(context, "گزارش دفتر فنی جدید ساخته شد 📂", Toast.LENGTH_SHORT).show()
+                                            }
+                                            "HSE" -> {
+                                                viewModel.startNewReport("HSE")
+                                                currentScreen = ActiveScreen.ReportEditor
+                                                Toast.makeText(context, "گزارش ایمنی HSE جدید ساخته شد ⚠️", Toast.LENGTH_SHORT).show()
+                                            }
+                                            "CUSTOM" -> {
+                                                viewModel.startNewReport("CUSTOM")
+                                                currentScreen = ActiveScreen.ReportEditor
+                                                val customTitle = viewModel.sharedPreferences.getString("custom_unit_title", "سایر واحدها") ?: "سایر واحدها"
+                                                Toast.makeText(context, "گزارش $customTitle جدید ساخته شد 📂", Toast.LENGTH_SHORT).show()
+                                            }
+                                            else -> {
+                                                showCreateTypeDialog = true
+                                            }
                                         }
                                     }
                                 )
@@ -445,6 +481,17 @@ fun MainAppScreen(
 
         // Choice Dialog for new Daily Report Type
         if (showCreateTypeDialog) {
+            val customTitle = remember { viewModel.sharedPreferences.getString("custom_unit_title", "سایر واحدها") ?: "سایر واحدها" }
+            val reportTypesList = listOf(
+                Triple("TECHNICAL", "دفتر فنی", Icons.Default.Description),
+                Triple("EXECUTION", "فنی و اجرا", Icons.Default.Engineering),
+                Triple("WAREHOUSE", "انبارداری", Icons.Default.Warehouse),
+                Triple("SURVEY", "نقشه‌برداری", Icons.Default.Map),
+                Triple("LEGAL", "امور حقوقی", Icons.Default.Gavel),
+                Triple("HSE", "ایمنی HSE", Icons.Default.Warning),
+                Triple("CUSTOM", customTitle, Icons.Default.Construction)
+            )
+
             AlertDialog(
                 onDismissRequest = { showCreateTypeDialog = false },
                 title = {
@@ -462,256 +509,102 @@ fun MainAppScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .verticalScroll(androidx.compose.foundation.rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = "نوع گزارش کارگاه متناسب با تخصص خود را انتخاب کنید. اطلاعات ثابت پروژه از گزارش قبلی به صورت خودکار کپی خواهد شد.",
+                            text = "بخش مورد نظر جهت درج گزارش روزانه را انتخاب کنید:",
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            lineHeight = 20.sp
+                            lineHeight = 18.sp,
+                            modifier = Modifier.padding(bottom = 4.dp)
                         )
 
-                        // Mode 1: Execution Team (فنی و اجرایی)
-                        Card(
-                            onClick = {
-                                viewModel.startNewReport("EXECUTION")
-                                currentScreen = ActiveScreen.ReportEditor
-                                showCreateTypeDialog = false
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 78.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f)
-                            ),
-                            border = BorderStroke(1.2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
-                        ) {
+                        val chunks = reportTypesList.chunked(2)
+                        chunks.forEach { rowItems ->
                             Row(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(42.dp)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Engineering,
-                                        contentDescription = "گزارش فنی",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(24.dp)
-                                    )
+                                rowItems.forEach { item ->
+                                    Card(
+                                        onClick = {
+                                            viewModel.startNewReport(item.first)
+                                            currentScreen = ActiveScreen.ReportEditor
+                                            showCreateTypeDialog = false
+                                        },
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(58.dp),
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = when (item.first) {
+                                                "TECHNICAL" -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f)
+                                                "EXECUTION" -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.85f)
+                                                "WAREHOUSE" -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.85f)
+                                                "HSE" -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f)
+                                                else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                                            }
+                                        ),
+                                        border = BorderStroke(
+                                            1.dp,
+                                            when (item.first) {
+                                                "TECHNICAL" -> MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                                                "EXECUTION" -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
+                                                "WAREHOUSE" -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f)
+                                                "HSE" -> MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
+                                                else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                                            }
+                                        )
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(horizontal = 8.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(32.dp)
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(
+                                                        when (item.first) {
+                                                            "TECHNICAL" -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                                            "EXECUTION" -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f)
+                                                            "WAREHOUSE" -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f)
+                                                            "HSE" -> MaterialTheme.colorScheme.error.copy(alpha = 0.1f)
+                                                            else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.08f)
+                                                        }
+                                                    ),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = item.third,
+                                                    contentDescription = item.second,
+                                                    modifier = Modifier.size(18.dp),
+                                                    tint = when (item.first) {
+                                                        "TECHNICAL" -> MaterialTheme.colorScheme.primary
+                                                        "EXECUTION" -> MaterialTheme.colorScheme.secondary
+                                                        "WAREHOUSE" -> MaterialTheme.colorScheme.tertiary
+                                                        "HSE" -> MaterialTheme.colorScheme.error
+                                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                                    }
+                                                )
+                                            }
+                                            Text(
+                                                text = item.second,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 11.5.sp,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
                                 }
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        "۱. گزارش فنی و اجرایی کارگاه (اجرا)",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.5.sp,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        "مختص ثبت کارهای اجرایی، پرسنل، ماشین‌آلات و مصالح وارده کارگاه",
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f),
-                                        lineHeight = 15.sp
-                                    )
+                                if (rowItems.size == 1) {
+                                    Spacer(modifier = Modifier.weight(1f))
                                 }
-                                Icon(
-                                    imageVector = Icons.Default.KeyboardArrowLeft,
-                                    contentDescription = "انتخاب",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-
-                        // Mode 2: Warehouse Team (ورود و خروج انبار)
-                        Card(
-                            onClick = {
-                                viewModel.startNewReport("WAREHOUSE")
-                                currentScreen = ActiveScreen.ReportEditor
-                                showCreateTypeDialog = false
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 78.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.85f)
-                            ),
-                            border = BorderStroke(1.2.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f))
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(42.dp)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Warehouse,
-                                        contentDescription = "گزارش انبار",
-                                        tint = MaterialTheme.colorScheme.secondary,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        "۲. گزارش ورود و خروج کالا و متریال (انبار)",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.5.sp,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        "انبارداری، ثبت ورود هم‌زمان بار و مصالح وارده و صدور خروج متریال به اکیپ‌ها",
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.82f),
-                                        lineHeight = 15.sp
-                                    )
-                                }
-                                Icon(
-                                    imageVector = Icons.Default.KeyboardArrowLeft,
-                                    contentDescription = "انتخاب",
-                                    tint = MaterialTheme.colorScheme.secondary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-
-                        // Mode 3: Legal & Land Acquisition (حقوقی و تحصیل اراضی)
-                        Card(
-                            onClick = {
-                                viewModel.startNewReport("LEGAL")
-                                currentScreen = ActiveScreen.ReportEditor
-                                showCreateTypeDialog = false
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 78.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.85f)
-                            ),
-                            border = BorderStroke(1.2.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f))
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(42.dp)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Gavel,
-                                        contentDescription = "گزارش حقوقی",
-                                        tint = MaterialTheme.colorScheme.tertiary,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        "۳. گزارش تحصیل اراضی و امور تملک (حقوقی)",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.5.sp,
-                                        color = MaterialTheme.colorScheme.onTertiaryContainer
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        "ثبت روند تملک املاک معارض، تحصیل حریم اراضی کارگاه و اخذ مجوزات قانونی",
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.82f),
-                                        lineHeight = 15.sp
-                                    )
-                                }
-                                Icon(
-                                    imageVector = Icons.Default.KeyboardArrowLeft,
-                                    contentDescription = "انتخاب",
-                                    tint = MaterialTheme.colorScheme.tertiary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-
-                        // Mode 4: Surveying Team (نقشه‌برداری)
-                        Card(
-                            onClick = {
-                                viewModel.startNewReport("SURVEY")
-                                currentScreen = ActiveScreen.ReportEditor
-                                showCreateTypeDialog = false
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 78.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            ),
-                            border = BorderStroke(1.2.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(42.dp)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Map,
-                                        contentDescription = "گزارش نقشه‌برداری",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        "۴. گزارش عملیات سنجش و شیت‌نویسی (نقشه‌برداری)",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.5.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        "ثبت برداشت نقاط، پیاده‌سازی مسیر گره‌ها و پیش‌بینی نقشه تفکیکی فردا",
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.82f),
-                                        lineHeight = 15.sp
-                                    )
-                                }
-                                Icon(
-                                    imageVector = Icons.Default.KeyboardArrowLeft,
-                                    contentDescription = "انتخاب",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(20.dp)
-                                )
                             }
                         }
                     }
@@ -732,6 +625,7 @@ fun MainAppScreen(
             var defaultSection by remember { mutableStateOf(viewModel.sharedPreferences.getString("default_section", "") ?: "") }
             var defaultPreparedBy by remember { mutableStateOf(viewModel.sharedPreferences.getString("default_prepared_by", "") ?: "") }
             var defaultWeather by remember { mutableStateOf(viewModel.sharedPreferences.getString("default_weather", "آفتابی ☀️") ?: "آفتابی ☀️") }
+            var customUnitTitle by remember { mutableStateOf(viewModel.sharedPreferences.getString("custom_unit_title", "سایر واحدها") ?: "سایر واحدها") }
             var defaultStartKm by remember { mutableStateOf(viewModel.sharedPreferences.getString("default_start_km", "") ?: "") }
             var defaultEndKm by remember { mutableStateOf(viewModel.sharedPreferences.getString("default_end_km", "") ?: "") }
             var defaultReportType by remember { mutableStateOf(viewModel.sharedPreferences.getString("default_report_type", "ASK") ?: "ASK") }
@@ -840,6 +734,15 @@ fun MainAppScreen(
                                     singleLine = true,
                                     shape = RoundedCornerShape(24.dp)
                                 )
+
+                                OutlinedTextField(
+                                    value = customUnitTitle,
+                                    onValueChange = { customUnitTitle = it },
+                                    label = { Text("عنوان سفارشی سایر واحدها (گزارش نوع پنجم)") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(24.dp)
+                                )
                             }
                         }
 
@@ -923,6 +826,85 @@ fun MainAppScreen(
                                         Triple("ASK", "همیشه بپرس", Icons.Default.Help),
                                         Triple("EXECUTION", "فنی و اجرا", Icons.Default.Engineering),
                                         Triple("WAREHOUSE", "انبارداری", Icons.Default.Warehouse)
+                                    ).forEach { (typeKey, typeLabel, typeIcon) ->
+                                        val isSelected = defaultReportType == typeKey
+                                        Button(
+                                            onClick = { defaultReportType = typeKey },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = if (isSelected) MaterialTheme.colorScheme.secondary else Color.Transparent,
+                                                contentColor = if (isSelected) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurfaceVariant
+                                            ),
+                                            shape = RoundedCornerShape(24.dp),
+                                            contentPadding = PaddingValues(horizontal = 4.dp),
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .height(36.dp)
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.Center
+                                            ) {
+                                                Icon(imageVector = typeIcon, contentDescription = null, modifier = Modifier.size(12.dp))
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text(typeLabel, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(2.dp))
+
+                                // Row 2 for default settings modal: LEGAL, SURVEY, TECHNICAL
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .border(1.dp, BorderColor, RoundedCornerShape(24.dp))
+                                        .padding(4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    listOf(
+                                        Triple("LEGAL", "امور حقوقی", Icons.Default.Gavel),
+                                        Triple("SURVEY", "نقشه‌برداری", Icons.Default.Map),
+                                        Triple("TECHNICAL", "دفتر فنی", Icons.Default.Description)
+                                    ).forEach { (typeKey, typeLabel, typeIcon) ->
+                                        val isSelected = defaultReportType == typeKey
+                                        Button(
+                                            onClick = { defaultReportType = typeKey },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = if (isSelected) MaterialTheme.colorScheme.secondary else Color.Transparent,
+                                                contentColor = if (isSelected) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurfaceVariant
+                                            ),
+                                            shape = RoundedCornerShape(24.dp),
+                                            contentPadding = PaddingValues(horizontal = 4.dp),
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .height(36.dp)
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.Center
+                                            ) {
+                                                Icon(imageVector = typeIcon, contentDescription = null, modifier = Modifier.size(12.dp))
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text(typeLabel, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(2.dp))
+
+                                // Row 3 for default settings modal: HSE, CUSTOM
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .border(1.dp, BorderColor, RoundedCornerShape(24.dp))
+                                        .padding(4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    listOf(
+                                        Triple("HSE", "ایمنی HSE", Icons.Default.Warning),
+                                        Triple("CUSTOM", customUnitTitle, Icons.Default.Construction)
                                     ).forEach { (typeKey, typeLabel, typeIcon) ->
                                         val isSelected = defaultReportType == typeKey
                                         Button(
@@ -1348,6 +1330,7 @@ fun MainAppScreen(
                                 "", // defaultStartKm (removed)
                                 ""  // defaultEndKm (removed)
                             )
+                            viewModel.sharedPreferences.edit().putString("custom_unit_title", customUnitTitle).apply()
                             // Persist app theme preference
                             viewModel.sharedPreferences.edit().putString("app_theme", defaultAppTheme).apply()
                             // Persist the daily reminder configuration preference
@@ -1836,24 +1819,28 @@ fun ReportListScreen(
                                         "WAREHOUSE" -> Icons.Default.Warehouse
                                         "LEGAL" -> Icons.Default.Gavel
                                         "SURVEY" -> Icons.Default.Map
+                                        "TECHNICAL" -> Icons.Default.Description
                                         else -> Icons.Default.Engineering
                                     }
                                     val badgeBg = when (rType) {
                                         "WAREHOUSE" -> MaterialTheme.colorScheme.secondaryContainer
                                         "LEGAL" -> MaterialTheme.colorScheme.tertiaryContainer
                                         "SURVEY" -> MaterialTheme.colorScheme.surfaceVariant
+                                        "TECHNICAL" -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
                                         else -> MaterialTheme.colorScheme.primaryContainer
                                     }
                                     val badgeTint = when (rType) {
                                         "WAREHOUSE" -> MaterialTheme.colorScheme.secondary
                                         "LEGAL" -> MaterialTheme.colorScheme.tertiary
                                         "SURVEY" -> MaterialTheme.colorScheme.onSurfaceVariant
+                                        "TECHNICAL" -> MaterialTheme.colorScheme.primary
                                         else -> MaterialTheme.colorScheme.primary
                                     }
                                     val badgeLabel = when (rType) {
                                         "WAREHOUSE" -> "انبارداری"
                                         "LEGAL" -> "حقوقی و تملک"
                                         "SURVEY" -> "نقشه‌برداری"
+                                        "TECHNICAL" -> "دفتر فنی"
                                         else -> "فنی و اجرا"
                                     }
 
@@ -2002,6 +1989,7 @@ fun ReportEditorScreen(
         "WAREHOUSE" -> listOf("مشخصات انبار", "ورود مصالح", "خروج مصالح", "ماشین‌آلات انبار", "پرسنل انبار", "یادداشت‌ها")
         "LEGAL" -> listOf("مشخصات پایه", "تحصیل اراضی", "مجوزهای قانونی", "ماشین‌آلات", "کارشناسان پیگیری", "یادداشت‌ها")
         "SURVEY" -> listOf("مشخصات پایه", "کارهای برداشت", "پیش‌بینی فردا", "تجهیزات نقشه‌برداری", "پرسنل نقشه‌برداری", "یادداشت‌ها")
+        "TECHNICAL" -> listOf("مشخصات پایه", "فعالیت دفتر فنی", "مصالح تخصصی", "ماشین‌آلات", "پرسنل فنی", "یادداشت‌ها")
         else -> listOf("مشخصات پایه", "فعالیت‌های اجرا", "ماشین‌آلات", "نیروها", "مصالح وارده", "یادداشت‌ها")
     }
 
@@ -2027,6 +2015,14 @@ fun ReportEditorScreen(
             Icons.Default.LocationOn,
             Icons.Default.Event,
             Icons.Default.Agriculture,
+            Icons.Default.Group,
+            Icons.Default.EditNote
+        )
+        "TECHNICAL" -> listOf(
+            Icons.Default.Info,
+            Icons.Default.Description,
+            Icons.Default.ShoppingCart,
+            Icons.Default.LocalShipping,
             Icons.Default.Group,
             Icons.Default.EditNote
         )
@@ -2114,6 +2110,16 @@ fun ReportEditorScreen(
                         0 -> BaseInfoTab(report, onUpdateReport)
                         1 -> TasksTab(report, onUpdateReport) // کارهای برداشت (customized inside TasksTab dynamically)
                         2 -> WarehouseMaterialsTab(report, isExit = false, onUpdateReport) // پیش‌بینی فردا (materials customized)
+                        3 -> MachineryTab(report, onUpdateReport)
+                        4 -> ManpowerTab(report, onUpdateReport)
+                        5 -> NotesTab(report, onUpdateReport)
+                    }
+                }
+                "TECHNICAL" -> {
+                    when (selectedTab) {
+                        0 -> BaseInfoTab(report, onUpdateReport)
+                        1 -> TasksTab(report, onUpdateReport) // خلاصه شرح کار دفتر فنی
+                        2 -> WarehouseMaterialsTab(report, isExit = false, onUpdateReport) // مصالح تخصصی وارده
                         3 -> MachineryTab(report, onUpdateReport)
                         4 -> ManpowerTab(report, onUpdateReport)
                         5 -> NotesTab(report, onUpdateReport)
@@ -2562,6 +2568,7 @@ fun TasksTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
 
     val isLegal = report.reportType == "LEGAL"
     val isSurvey = report.reportType == "SURVEY"
+    val isTechnical = report.reportType == "TECHNICAL"
 
     val popularUnits = when {
         isLegal -> listOf("مترمربع", "دهانه", "پلاک ثبتی", "باب مغازه", "فقره")
@@ -2573,6 +2580,7 @@ fun TasksTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
         unitInput = when {
             isLegal -> "مترمربع"
             isSurvey -> "نقطه"
+            isTechnical -> ""
             else -> "مترمکعب"
         }
     }
@@ -2580,12 +2588,14 @@ fun TasksTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
     val titleText = when {
         isLegal -> "ثبت روند تحصیل اراضی و رفع معارضین ملکی"
         isSurvey -> "ثبت آمار شیت‌ها و پیاده‌سازی نقشه‌برداری امروز"
+        isTechnical -> "ثبت شرح فعالیت‌های دفتر فنی"
         else -> "افزودن فعالیت اجرایی انجام شده در کارگاه"
     }
 
     val descLabel = when {
         isLegal -> "شرح ملک معارض، پلاک ثبتی یا نام مالک زمین"
         isSurvey -> "شرح دقیق عملیات (برداشت باند، شات‌کریت، پیاده‌سازی)"
+        isTechnical -> "شرح کامل فعالیت واحد فنی"
         else -> "شرح کامل فعالیت (مثلا: آرماتوربندی سقف دوم)"
     }
 
@@ -2636,127 +2646,145 @@ fun TasksTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
                     shape = RoundedCornerShape(24.dp)
                 )
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    OutlinedTextField(
-                        value = startKmInput,
-                        onValueChange = { startKmInput = persianDigitsToEnglish(it) },
-                        label = { Text("کیلومتر ابتدا") },
+                if (!isTechnical) {
+                    Row(
                         modifier = Modifier
-                            .weight(1f)
-                            .onFocusChanged { focusState ->
-                                if (!focusState.isFocused) {
-                                    startKmInput = formatStation(startKmInput)
-                                }
-                            }
-                            .testTag("task_start_km_input"),
-                        shape = RoundedCornerShape(24.dp),
-                        singleLine = true
-                    )
-
-                    OutlinedTextField(
-                        value = endKmInput,
-                        onValueChange = { endKmInput = persianDigitsToEnglish(it) },
-                        label = { Text("کیلومتر انتها") },
-                        modifier = Modifier
-                            .weight(1f)
-                            .onFocusChanged { focusState ->
-                                if (!focusState.isFocused) {
-                                    endKmInput = formatStation(endKmInput)
-                                }
-                            }
-                            .testTag("task_end_km_input"),
-                        shape = RoundedCornerShape(24.dp),
-                        singleLine = true
-                    )
-                }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    OutlinedTextField(
-                        value = locInput,
-                        onValueChange = { locInput = it },
-                        label = { Text("محل دقیق یا کیلومتر") },
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("task_location_input"),
-                        shape = RoundedCornerShape(24.dp),
-                        singleLine = true
-                    )
-
-                    OutlinedTextField(
-                        value = qtyInput,
-                        onValueChange = { qtyInput = persianDigitsToEnglish(it) },
-                        label = { Text("مقدار امروز") },
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("task_qty_input"),
-                        shape = RoundedCornerShape(24.dp),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
-                            imeAction = ImeAction.Next
-                        )
-                    )
-                }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    var expanded by remember { mutableStateOf(false) }
-                    Box(modifier = Modifier.weight(1f)) {
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
                         OutlinedTextField(
-                            value = unitInput,
-                            onValueChange = { unitInput = it },
-                            label = { Text("واحد کار") },
-                            trailingIcon = {
-                                IconButton(onClick = { expanded = !expanded }) {
-                                    Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "انتخاب واحد")
-                                }
-                            },
+                            value = startKmInput,
+                            onValueChange = { startKmInput = persianDigitsToEnglish(it) },
+                            label = { Text("کیلومتر ابتدا") },
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("task_unit_input"),
+                                .weight(1f)
+                                .onFocusChanged { focusState ->
+                                    if (!focusState.isFocused) {
+                                        startKmInput = formatStation(startKmInput)
+                                    }
+                                }
+                                .testTag("task_start_km_input"),
                             shape = RoundedCornerShape(24.dp),
                             singleLine = true
                         )
-                        DropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
-                        ) {
-                            popularUnits.forEach { unit ->
-                                DropdownMenuItem(
-                                    text = { Text(unit) },
-                                    onClick = {
-                                        unitInput = unit
-                                        expanded = false
+
+                        OutlinedTextField(
+                            value = endKmInput,
+                            onValueChange = { endKmInput = persianDigitsToEnglish(it) },
+                            label = { Text("کیلومتر انتها") },
+                            modifier = Modifier
+                                .weight(1f)
+                                .onFocusChanged { focusState ->
+                                    if (!focusState.isFocused) {
+                                        endKmInput = formatStation(endKmInput)
                                     }
-                                )
-                            }
-                        }
+                                }
+                                .testTag("task_end_km_input"),
+                            shape = RoundedCornerShape(24.dp),
+                            singleLine = true
+                        )
                     }
 
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = locInput,
+                            onValueChange = { locInput = it },
+                            label = { Text("محل دقیق یا کیلومتر") },
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("task_location_input"),
+                            shape = RoundedCornerShape(24.dp),
+                            singleLine = true
+                        )
+
+                        OutlinedTextField(
+                            value = qtyInput,
+                            onValueChange = { qtyInput = persianDigitsToEnglish(it) },
+                            label = { Text("مقدار امروز") },
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("task_qty_input"),
+                            shape = RoundedCornerShape(24.dp),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number,
+                                imeAction = ImeAction.Next
+                            )
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        var expanded by remember { mutableStateOf(false) }
+                        Box(modifier = Modifier.weight(1f)) {
+                            OutlinedTextField(
+                                value = unitInput,
+                                onValueChange = { unitInput = it },
+                                label = { Text("واحد کار") },
+                                trailingIcon = {
+                                    IconButton(onClick = { expanded = !expanded }) {
+                                        Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "انتخاب واحد")
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("task_unit_input"),
+                                shape = RoundedCornerShape(24.dp),
+                                singleLine = true
+                            )
+                            DropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false }
+                            ) {
+                                popularUnits.forEach { unit ->
+                                    DropdownMenuItem(
+                                        text = { Text(unit) },
+                                        onClick = {
+                                            unitInput = unit
+                                            expanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        OutlinedTextField(
+                            value = accInput,
+                            onValueChange = { accInput = it },
+                            label = { Text("توضیحات") },
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("task_notes_input"),
+                            shape = RoundedCornerShape(24.dp),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Text,
+                                imeAction = ImeAction.Done
+                            )
+                        )
+                    }
+                } else {
                     OutlinedTextField(
                         value = accInput,
                         onValueChange = { accInput = it },
-                        label = { Text("توضیحات") },
+                        label = { Text("توضیحات و ملاحظات فعالیت فنی") },
+                        placeholder = { Text("ملاحظات صورت‌جلسه، شماره شیت، مترور یا محاسب مربوطه...") },
                         modifier = Modifier
-                            .weight(1f)
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp)
                             .testTag("task_notes_input"),
                         shape = RoundedCornerShape(24.dp),
-                        singleLine = true,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Text,
                             imeAction = ImeAction.Done
@@ -3022,7 +3050,30 @@ fun MachineryTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
                             } else {
                                 historyList.forEach { mac ->
                                     DropdownMenuItem(
-                                        text = { Text(mac, fontSize = 13.sp) },
+                                        text = {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                modifier = Modifier.fillMaxWidth().widthIn(min = 220.dp)
+                                            ) {
+                                                Text(mac, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                                                IconButton(
+                                                    onClick = {
+                                                        val updated = machineryHistory.toMutableSet().apply { remove(mac) }
+                                                        machineryHistory = updated
+                                                        sharedPreferences.edit().putStringSet("machinery_history", updated).apply()
+                                                    },
+                                                    modifier = Modifier.size(24.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Close,
+                                                        contentDescription = "حذف رکورد",
+                                                        tint = Color(0xFFEF4444),
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                }
+                                            }
+                                        },
                                         onClick = {
                                             typeInput = mac
                                             expanded = false
@@ -3382,6 +3433,10 @@ fun ManpowerTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
         ) ?: emptySet())
     }
 
+    var manpowerNamesHistory by remember {
+        mutableStateOf(sharedPreferences.getStringSet("manpower_names_history", emptySet()) ?: emptySet())
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -3405,16 +3460,70 @@ fun ManpowerTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
                         modifier = Modifier.padding(bottom = 2.dp)
                     )
 
-                    OutlinedTextField(
-                        value = nameInput,
-                        onValueChange = { nameInput = it },
-                        label = { Text("نام و نام خانوادگی") },
-                        placeholder = { Text("مثال: علی رضایی") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("manpower_title_input"),
-                        shape = RoundedCornerShape(24.dp)
-                    )
+                    var nameExpanded by remember { mutableStateOf(false) }
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = nameInput,
+                            onValueChange = { nameInput = it },
+                            label = { Text("نام و نام خانوادگی") },
+                            placeholder = { Text("مثال: علی رضایی") },
+                            trailingIcon = {
+                                IconButton(onClick = { nameExpanded = !nameExpanded }) {
+                                    Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "اسامی قبلی", tint = Color(0xFF0F766E))
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("manpower_title_input"),
+                            shape = RoundedCornerShape(24.dp)
+                        )
+                        DropdownMenu(
+                            expanded = nameExpanded,
+                            onDismissRequest = { nameExpanded = false },
+                            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                        ) {
+                            val namesList = manpowerNamesHistory.toList().sorted()
+                            if (namesList.isEmpty()) {
+                                DropdownMenuItem(
+                                    text = { Text("تاریخچه خالی است (اسم جدید بنویسید)", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), fontSize = 12.sp) },
+                                    onClick = { nameExpanded = false }
+                                )
+                            } else {
+                                namesList.forEach { name ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                modifier = Modifier.fillMaxWidth().widthIn(min = 220.dp)
+                                            ) {
+                                                Text(name, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                                                IconButton(
+                                                    onClick = {
+                                                        val updated = manpowerNamesHistory.toMutableSet().apply { remove(name) }
+                                                        manpowerNamesHistory = updated
+                                                        sharedPreferences.edit().putStringSet("manpower_names_history", updated).apply()
+                                                    },
+                                                    modifier = Modifier.size(24.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Close,
+                                                        contentDescription = "حذف رکورد",
+                                                        tint = Color(0xFFEF4444),
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        onClick = {
+                                            nameInput = name
+                                            nameExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
 
                     OutlinedTextField(
                         value = roleInput,
@@ -3434,7 +3543,30 @@ fun ManpowerTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
                                 ) {
                                     manpowerRolesHistory.toList().sorted().forEach { role ->
                                         DropdownMenuItem(
-                                            text = { Text(role, fontSize = 13.sp) },
+                                            text = {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    modifier = Modifier.fillMaxWidth().widthIn(min = 220.dp)
+                                                ) {
+                                                    Text(role, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                                                    IconButton(
+                                                        onClick = {
+                                                            val updated = manpowerRolesHistory.toMutableSet().apply { remove(role) }
+                                                            manpowerRolesHistory = updated
+                                                            sharedPreferences.edit().putStringSet("manpower_roles_history", updated).apply()
+                                                        },
+                                                        modifier = Modifier.size(24.dp)
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Close,
+                                                            contentDescription = "حذف رکورد",
+                                                            tint = Color(0xFFEF4444),
+                                                            modifier = Modifier.size(16.dp)
+                                                        )
+                                                    }
+                                                }
+                                            },
                                             onClick = {
                                                 roleInput = role
                                                 expanded = false
@@ -3557,6 +3689,11 @@ fun ManpowerTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
                                     val newHistory = manpowerRolesHistory.toMutableSet().apply { add(trimmedRole) }
                                     sharedPreferences.edit().putStringSet("manpower_roles_history", newHistory).apply()
                                     manpowerRolesHistory = newHistory
+                                }
+                                if (trimmedName.isNotBlank() && !manpowerNamesHistory.contains(trimmedName)) {
+                                    val newNames = manpowerNamesHistory.toMutableSet().apply { add(trimmedName) }
+                                    sharedPreferences.edit().putStringSet("manpower_names_history", newNames).apply()
+                                    manpowerNamesHistory = newNames
                                 }
 
                                 val updatedPerson = ManpowerEntry(
@@ -3856,7 +3993,30 @@ fun MaterialsTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
                     ) {
                         materialsHistory.toList().sorted().forEach { mat ->
                             DropdownMenuItem(
-                                text = { Text(mat, fontSize = 13.sp) },
+                                text = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier.fillMaxWidth().widthIn(min = 220.dp)
+                                    ) {
+                                        Text(mat, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                                        IconButton(
+                                            onClick = {
+                                                val updated = materialsHistory.toMutableSet().apply { remove(mat) }
+                                                materialsHistory = updated
+                                                sharedPreferences.edit().putStringSet("site_materials_history", updated).apply()
+                                            },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = "حذف رکورد",
+                                                tint = Color(0xFFEF4444),
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                },
                                 onClick = {
                                     typeInput = mat
                                     expanded = false
@@ -4187,6 +4347,7 @@ fun WarehouseMaterialsTab(
 
     val isLegal = report.reportType == "LEGAL"
     val isSurvey = report.reportType == "SURVEY"
+    val isTechnical = report.reportType == "TECHNICAL"
 
     val context = LocalContext.current
     val sharedPreferences = remember { context.getSharedPreferences("app_settings", Context.MODE_PRIVATE) }
@@ -4195,6 +4356,7 @@ fun WarehouseMaterialsTab(
     val historyKey = when {
         isLegal -> "warehouse_legal_history"
         isSurvey -> "warehouse_survey_history"
+        isTechnical -> "warehouse_technical_history"
         isExit -> "warehouse_exit_history"
         else -> "warehouse_import_history"
     }
@@ -4202,6 +4364,7 @@ fun WarehouseMaterialsTab(
     val presetDefaultOptions = when {
         isLegal -> setOf("استعلام حریم لوله گاز", "مجوز قطع اشجار شهرداری", "استعلام اداره کل راه و شهرسازی", "صورت‌جلسه توافق مالکین زمین", "مجوز حریم فشار قوی برق")
         isSurvey -> setOf("برداشت توپوگرافی باند حریم", "GPS دو فرکانسه ایستگاه جدید", "پیاده‌سازی آکس دیوار غربی", "کدگذاری ترانشه حفاری", "شیت شاقولی فونداسیون")
+        isTechnical -> setOf("کابل فیبر نوری زره‌دار", "سنسور حرارتی بتن دیجیتال", "لوله مسی چاه تهویه اسپیلت", "الکترود جوشکاری دکمه‌ای ایساب", "پیچ و مهره گرید ۸.۸ سازه فلزی", "رزین اپوکسی اتصال بتن آب‌بند")
         else -> setOf("سیمان تیپ ۲ پاکتی", "گچ جبل الگری", "آجر لفتون سفالی", "یونولیت سقفی فشرده", "لوله پی‌وی‌سی سایز ۱۱۰", "شیرآلات صنعتی برنجی", "مفتول آرماتوربندی")
     }
     
@@ -4212,6 +4375,7 @@ fun WarehouseMaterialsTab(
     val titleText = when {
         isLegal -> if (editingIndex != null) "ویرایش ردیف استعلام/مجوز ${editingIndex!! + 1} ✏️" else "ثبت روند اخذ مجوزات یا استعلامات مربوطه ⚖️"
         isSurvey -> if (editingIndex != null) "ویرایش ردیف پیش‌بینی ${editingIndex!! + 1} ✏️" else "پیش‌بینی و برنامه‌ریزی عملیات نقشه‌برداری فردا 🧭"
+        isTechnical -> if (editingIndex != null) "ویرایش متریال خاص ردیف ${editingIndex!! + 1} ✏️" else "ثبت آمار مصالح تخصصی وارده به کارگاه 📦"
         isExit -> if (editingIndex != null) "ویرایش کالا صادره ردیف ${editingIndex!! + 1} ✏️" else "ثبت خروج مصالح و کالا از انبار (صادره) 📤"
         else -> if (editingIndex != null) "ویرایش ورود مصالح ردیف ${editingIndex!! + 1} ✏️" else "ثبت ورود مصالح به انبار کارگاه (وارده) 📥"
     }
@@ -4219,12 +4383,14 @@ fun WarehouseMaterialsTab(
     val typeLabel = when {
         isLegal -> "عنوان مجوز مورد نیاز یا مکاتبه استعلام"
         isSurvey -> "شرح کارهای پیش‌بینی شده فردا"
+        isTechnical -> "نوع مصالح تخصص یا تکنولوژیک وارده"
         else -> "نوع کالا یا مصالح"
     }
 
     val destinationLabel = when {
         isLegal -> "سازمان پیگیری‌کننده / ارگان هدف"
         isSurvey -> "موقعییت فرضی فردا (کیلومتر ابتدا الی انتها یا ردیف)"
+        isTechnical -> "محل استقرار یا مخزن تخلیه فنی"
         isExit -> "تحویل گیرنده (اکیپ / شخص مصرف‌کننده)"
         else -> "محل تخلیه / قفسه انبار"
     }
@@ -4232,6 +4398,7 @@ fun WarehouseMaterialsTab(
     val commentsLabel = when {
         isLegal -> "شرح آخرین وضعیت یا اقدامات حقوقی انجام شده"
         isSurvey -> "ملاحظات سنجش / تراز مبناء پیش‌نیاز"
+        isTechnical -> "اطلاعات بارنامه / تاییدیه آزمایشگاه فنی ملحق"
         else -> "توضیحات تکمیلی یا کیفیت ظاهری"
     }
 
@@ -4276,7 +4443,30 @@ fun WarehouseMaterialsTab(
                     ) {
                         dynamicOptions.toList().sorted().forEach { mat ->
                             DropdownMenuItem(
-                                text = { Text(mat, fontSize = 13.sp) },
+                                text = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier.fillMaxWidth().widthIn(min = 220.dp)
+                                    ) {
+                                        Text(mat, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                                        IconButton(
+                                            onClick = {
+                                                val updated = dynamicOptions.toMutableSet().apply { remove(mat) }
+                                                dynamicOptions = updated
+                                                sharedPreferences.edit().putStringSet(historyKey, updated).apply()
+                                            },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = "حذف رکورد",
+                                                tint = Color(0xFFEF4444),
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                },
                                 onClick = {
                                     typeInput = mat
                                     expanded = false
@@ -5157,6 +5347,7 @@ fun ProjectSettingsTab(
     var defaultProject by remember { mutableStateOf(viewModel.sharedPreferences.getString("default_project", "") ?: "") }
     var defaultSection by remember { mutableStateOf(viewModel.sharedPreferences.getString("default_section", "") ?: "") }
     var defaultPreparedBy by remember { mutableStateOf(viewModel.sharedPreferences.getString("default_prepared_by", "") ?: "") }
+    var customUnitTitle by remember { mutableStateOf(viewModel.sharedPreferences.getString("custom_unit_title", "سایر واحدها") ?: "سایر واحدها") }
     var defaultWeather by remember { mutableStateOf(viewModel.sharedPreferences.getString("default_weather", "آفتابی ☀️") ?: "آفتابی ☀️") }
     var defaultReportType by remember { mutableStateOf(viewModel.sharedPreferences.getString("default_report_type", "ASK") ?: "ASK") }
     var showWeatherPickerForSettings by remember { mutableStateOf(false) }
@@ -5258,6 +5449,15 @@ fun ProjectSettingsTab(
                     value = defaultPreparedBy,
                     onValueChange = { defaultPreparedBy = it },
                     label = { Text("نام تنظیم‌کننده پیش‌فرض") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(24.dp)
+                )
+
+                OutlinedTextField(
+                    value = customUnitTitle,
+                    onValueChange = { customUnitTitle = it },
+                    label = { Text("عنوان سفارشی سایر واحدها (گزارش نوع پنجم)") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     shape = RoundedCornerShape(24.dp)
@@ -5375,7 +5575,7 @@ fun ProjectSettingsTab(
                         }
                     }
 
-                    // Row 2: LEGAL, SURVEY
+                    // Row 2: LEGAL, SURVEY, TECHNICAL
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -5385,7 +5585,45 @@ fun ProjectSettingsTab(
                     ) {
                         listOf(
                             Triple("LEGAL", "امور حقوقی", Icons.Default.Gavel),
-                            Triple("SURVEY", "نقشه‌برداری", Icons.Default.Map)
+                            Triple("SURVEY", "نقشه‌برداری", Icons.Default.Map),
+                            Triple("TECHNICAL", "دفتر فنی", Icons.Default.Description)
+                        ).forEach { (typeKey, typeLabel, typeIcon) ->
+                            val isSelected = defaultReportType == typeKey
+                            Button(
+                                onClick = { defaultReportType = typeKey },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isSelected) MaterialTheme.colorScheme.secondary else Color.Transparent,
+                                    contentColor = if (isSelected) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurfaceVariant
+                                ),
+                                shape = RoundedCornerShape(24.dp),
+                                contentPadding = PaddingValues(horizontal = 4.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(38.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(imageVector = typeIcon, contentDescription = null, modifier = Modifier.size(12.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(typeLabel, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+
+                    // Row 3: HSE, CUSTOM
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, BorderColor, RoundedCornerShape(24.dp))
+                            .padding(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        listOf(
+                            Triple("HSE", "ایمنی HSE", Icons.Default.Warning),
+                            Triple("CUSTOM", customUnitTitle, Icons.Default.Construction)
                         ).forEach { (typeKey, typeLabel, typeIcon) ->
                             val isSelected = defaultReportType == typeKey
                             Button(
@@ -5631,6 +5869,7 @@ fun ProjectSettingsTab(
                     "", 
                     ""  
                 )
+                viewModel.sharedPreferences.edit().putString("custom_unit_title", customUnitTitle).apply()
                 viewModel.sharedPreferences.edit().putString("app_theme", defaultAppTheme).apply()
                 viewModel.sharedPreferences.edit().putBoolean("daily_reminder_enabled", dailyReminderEnabled).apply()
                 if (dailyReminderEnabled) {
@@ -5900,7 +6139,7 @@ fun AboutAppTab(viewModel: ReportViewModel) {
                 border = BorderStroke(1.dp, Color(0xFFF59E0B)),
             ) {
                 Text(
-                    text = "نسخه ۲.۰",
+                    text = "نسخه ۲.۰.۲",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFFD97706),
@@ -5947,7 +6186,7 @@ fun AboutAppTab(viewModel: ReportViewModel) {
                         type = "message/rfc822"
                         putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf("MOSTAFA5804@GMAIL.COM"))
                         putExtra(android.content.Intent.EXTRA_SUBJECT, "بازخورد و ارتباط با سازنده سامانه گزارش یار")
-                        putExtra(android.content.Intent.EXTRA_TEXT, "با سلام و احترام،\nبازخورد من درباره برنامه سامانه گزارش یار کارگاه نسخه ۲.۰:\n\n")
+                        putExtra(android.content.Intent.EXTRA_TEXT, "با سلام و احترام،\nبازخورد من درباره برنامه سامانه گزارش یار کارگاه نسخه ۲.۰.۲:\n\n")
                     }
                     context.startActivity(android.content.Intent.createChooser(intent, "ارسال ایمیل به سازنده"))
                 } catch (e: Exception) {

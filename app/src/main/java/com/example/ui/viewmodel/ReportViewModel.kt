@@ -278,7 +278,8 @@ class ReportViewModel(
         _isExporting.value = true
         
         val signatureBase64 = sharedPreferences.getString("user_signature", "") ?: ""
-        val htmlContent = PdfGenerator.generateHtmlReport(report, signatureBase64)
+        val customUnitTitle = sharedPreferences.getString("custom_unit_title", "سایر واحدها") ?: "سایر واحدها"
+        val htmlContent = PdfGenerator.generateHtmlReport(report, signatureBase64, customUnitTitle)
         
         // WebViews must be run on the UI Main thread
         viewModelScope.launch {
@@ -315,7 +316,8 @@ class ReportViewModel(
         _isExporting.value = true
         
         val signatureBase64 = sharedPreferences.getString("user_signature", "") ?: ""
-        val htmlContent = PdfGenerator.generateHtmlReport(report, signatureBase64)
+        val customUnitTitle = sharedPreferences.getString("custom_unit_title", "سایر واحدها") ?: "سایر واحدها"
+        val htmlContent = PdfGenerator.generateHtmlReport(report, signatureBase64, customUnitTitle)
         
         viewModelScope.launch {
             val webView = WebView(context)
@@ -331,6 +333,9 @@ class ReportViewModel(
                             "WAREHOUSE" -> "گزارش انبار"
                             "LEGAL" -> "گزارش حقوقی"
                             "SURVEY" -> "گزارش نقشه برداری"
+                            "TECHNICAL" -> "گزارش دفتر فنی"
+                            "HSE" -> "گزارش ایمنی HSE"
+                            "CUSTOM" -> customUnitTitle
                             else -> "گزارش اجرا"
                         }
                         val cleanDateStr = report.date.replace("/", ".")

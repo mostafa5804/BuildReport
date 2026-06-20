@@ -9,7 +9,7 @@ import java.io.File
 
 object PdfGenerator {
     // Generate HTML String from DailyReport
-    fun generateHtmlReport(report: DailyReport, signatureBase64: String = ""): String {
+    fun generateHtmlReport(report: DailyReport, signatureBase64: String = "", customUnitTitle: String = "سایر واحدها"): String {
         val rType = report.reportType
         
         // Base title based on reportType
@@ -17,6 +17,9 @@ object PdfGenerator {
             "WAREHOUSE" -> "گزارش روزانه ورود و خروج مصالح انبار"
             "LEGAL" -> "گزارش روزانه امور حقوقی و تحصیل اراضی"
             "SURVEY" -> "گزارش روزانه عملیات نقشه‌برداری کارگاه"
+            "TECHNICAL" -> "گزارش روزانه دفتر فنی کارگاه"
+            "HSE" -> "گزارش روزانه واحد ایمنی HSE کارگاه"
+            "CUSTOM" -> "گزارش روزانه واحد $customUnitTitle"
             else -> "گزارش روزانه فعالیت‌های فنی و اجرایی کارگاه"
         }
 
@@ -405,6 +408,306 @@ object PdfGenerator {
                                 <th style="width: 25%;">نام سرپرست اکیپ / شیت‌نویس</th>
                                 <th style="width: 15%;">تعداد حاضر</th>
                                 <th style="width: 20%;">توضیحات کارکرد نقاط موضوعی</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            $manpowerRows
+                        </tbody>
+                    </table>
+                """.trimIndent()
+            }
+            "HSE" -> {
+                val tasksRows = if (report.tasks.isEmpty()) {
+                    "<tr><td colspan='3' class='text-muted'>هیچ فعالیت ایمنی و بهداشت (HSE) در این تاریخ ثبت نشده است</td></tr>"
+                } else {
+                    report.tasks.mapIndexed { index, task ->
+                        """
+                        <tr>
+                            <td class="cell-index">${index + 1}</td>
+                            <td class="cell-main">${task.description}</td>
+                            <td class="cell-desc">${task.comments.ifEmpty { "---" }}</td>
+                        </tr>
+                        """.trimIndent()
+                    }.joinToString("")
+                }
+
+                val technicalMaterialsRows = if (report.materials.isEmpty()) {
+                    "<tr><td colspan='5' class='text-muted'>هیچ اقلام یا مصالح ایمنی برای این روز ثبت نشده است</td></tr>"
+                } else {
+                    report.materials.mapIndexed { index, material ->
+                        """
+                        <tr>
+                            <td class="cell-index">${index + 1}</td>
+                            <td class="cell-main">${material.type}</td>
+                            <td>${material.quantity}</td>
+                            <td>${material.unit}</td>
+                            <td class="cell-desc">${material.comments.ifEmpty { "---" }}</td>
+                        </tr>
+                        """.trimIndent()
+                    }.joinToString("")
+                }
+
+                bodyContentHtml = """
+                    <!-- 1. شرح فعالیت‌های ایمنی HSE -->
+                    <div class="section-title">۱. خلاصه شرح کار و فعالیت‌های واحد ایمنی و بهداشت (HSE) کارگاه</div>
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%;">ردیف</th>
+                                <th style="width: 60%;">شرح اقدام یا فعالیت ایمنی (کنترل، آموزش، گشت و صدور مجوزها)</th>
+                                <th style="width: 35%;">توضیحات و ملاحظات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            $tasksRows
+                        </tbody>
+                    </table>
+
+                    <!-- 2. مصالح و تجهیزات ایمنی وارده -->
+                    <div class="section-title">۲. آمار ورود مصالح و تجهیزات حفاظتی و ایمنی به کارگاه</div>
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%;">ردیف</th>
+                                <th style="width: 35%;">نوع کالا/تجهیزات ایمنی وارده (مانند: کفش، کلاه، دستکش، علائم)</th>
+                                <th style="width: 15%;">مقدار</th>
+                                <th style="width: 12%;">واحد</th>
+                                <th style="width: 33%;">توضیحات فرستنده و روال تامین</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            $technicalMaterialsRows
+                        </tbody>
+                    </table>
+
+                    <!-- 3. ماشین‌آلات ایمنی -->
+                    <div class="section-title">۳. وضعیت تجهیزات ترابری، اطفای حریق و کمک‌های اولیه واحد ایمنی</div>
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%;">ردیف</th>
+                                <th style="width: 35%;">نام و مدل تجهیزات</th>
+                                <th style="width: 12%;">فعال</th>
+                                <th style="width: 12%;">غیر فعال</th>
+                                <th style="width: 15%;">ساعت کارکرد</th>
+                                <th style="width: 21%;">توضیحات و وضعیت</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            $machineryRows
+                        </tbody>
+                    </table>
+
+                    <!-- 4. نیروی انسانی ایمنی -->
+                    <div class="section-title">۴. آمار افسران ایمنی، پزشک‌یار و پرسنل بخش HSE</div>
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%;">ردیف</th>
+                                <th style="width: 35%;">سمت / تخصص</th>
+                                <th style="width: 25%;">نام سرپرست/مسئول تکنسین</th>
+                                <th style="width: 15%;">تعداد حاضر</th>
+                                <th style="width: 20%;">توضیحات کارکرد پرسنل</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            $manpowerRows
+                        </tbody>
+                    </table>
+                """.trimIndent()
+            }
+            "CUSTOM" -> {
+                val tasksRows = if (report.tasks.isEmpty()) {
+                    "<tr><td colspan='3' class='text-muted'>هیچ فعالیت واحد $customUnitTitle در این تاریخ ثبت نشده است</td></tr>"
+                } else {
+                    report.tasks.mapIndexed { index, task ->
+                        """
+                        <tr>
+                            <td class="cell-index">${index + 1}</td>
+                            <td class="cell-main">${task.description}</td>
+                            <td class="cell-desc">${task.comments.ifEmpty { "---" }}</td>
+                        </tr>
+                        """.trimIndent()
+                    }.joinToString("")
+                }
+
+                val technicalMaterialsRows = if (report.materials.isEmpty()) {
+                    "<tr><td colspan='5' class='text-muted'>هیچ مصالح اختصاصی برای این روز ثبت نشده است</td></tr>"
+                } else {
+                    report.materials.mapIndexed { index, material ->
+                        """
+                        <tr>
+                            <td class="cell-index">${index + 1}</td>
+                            <td class="cell-main">${material.type}</td>
+                            <td>${material.quantity}</td>
+                            <td>${material.unit}</td>
+                            <td class="cell-desc">${material.comments.ifEmpty { "---" }}</td>
+                        </tr>
+                        """.trimIndent()
+                    }.joinToString("")
+                }
+
+                bodyContentHtml = """
+                    <!-- 1. شرح فعالیت‌های واحد سفارشی -->
+                    <div class="section-title">۱. خلاصه شرح کار و فعالیت‌های واحد $customUnitTitle کارگاه</div>
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%;">ردیف</th>
+                                <th style="width: 60%;">شرح کامل فعالیت واحد $customUnitTitle</th>
+                                <th style="width: 35%;">توضیحات و ملاحظات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            $tasksRows
+                        </tbody>
+                    </table>
+
+                    <!-- 2. مصالح تخصصی وارده -->
+                    <div class="section-title">۲. آمار ورود مصالح و اقلام تخصصی واحد $customUnitTitle</div>
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%;">ردیف</th>
+                                <th style="width: 35%;">نوع مصالح/کالا تخصصی وارده</th>
+                                <th style="width: 15%;">مقدار</th>
+                                <th style="width: 12%;">واحد</th>
+                                <th style="width: 33%;">توضیحات و فرستندگان اقلام</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            $technicalMaterialsRows
+                        </tbody>
+                    </table>
+
+                    <!-- 3. ماشین‌آلات -->
+                    <div class="section-title">۳. وضعیت ماشین‌آلات و تجهیزات واحد $customUnitTitle</div>
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%;">ردیف</th>
+                                <th style="width: 35%;">نام و مدل تجهیزات</th>
+                                <th style="width: 12%;">فعال</th>
+                                <th style="width: 12%;">غیر فعال</th>
+                                <th style="width: 15%;">ساعت کارکرد</th>
+                                <th style="width: 21%;">توضیحات و وضعیت</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            $machineryRows
+                        </tbody>
+                    </table>
+
+                    <!-- 4. نیروی انسانی -->
+                    <div class="section-title">۴. آمار پرسنل و نیروهای فعال واحد $customUnitTitle</div>
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%;">ردیف</th>
+                                <th style="width: 35%;">سمت / تخصص</th>
+                                <th style="width: 25%;">نام سرپرست/مسئول مربوطه</th>
+                                <th style="width: 15%;">تعداد حاضر</th>
+                                <th style="width: 20%;">توضیحات کارکرد پرسنل</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            $manpowerRows
+                        </tbody>
+                    </table>
+                """.trimIndent()
+            }
+            "TECHNICAL" -> {
+                val tasksRows = if (report.tasks.isEmpty()) {
+                    "<tr><td colspan='3' class='text-muted'>هیچ فعالیت دفتر فنی در این تاریخ ثبت نشده است</td></tr>"
+                } else {
+                    report.tasks.mapIndexed { index, task ->
+                        """
+                        <tr>
+                            <td class="cell-index">${index + 1}</td>
+                            <td class="cell-main">${task.description}</td>
+                            <td class="cell-desc">${task.comments.ifEmpty { "---" }}</td>
+                        </tr>
+                        """.trimIndent()
+                    }.joinToString("")
+                }
+
+                val technicalMaterialsRows = if (report.materials.isEmpty()) {
+                    "<tr><td colspan='5' class='text-muted'>هیچ مصالح تخصصی برای این روز ثبت نشده است</td></tr>"
+                } else {
+                    report.materials.mapIndexed { index, material ->
+                        """
+                        <tr>
+                            <td class="cell-index">${index + 1}</td>
+                            <td class="cell-main">${material.type}</td>
+                            <td>${material.quantity}</td>
+                            <td>${material.unit}</td>
+                            <td class="cell-desc">${material.comments.ifEmpty { "---" }}</td>
+                        </tr>
+                        """.trimIndent()
+                    }.joinToString("")
+                }
+
+                bodyContentHtml = """
+                    <!-- 1. شرح فعالیت‌های دفتر فنی -->
+                    <div class="section-title">۱. خلاصه شرح کار و فعالیت‌های دفتر فنی کارگاه</div>
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%;">ردیف</th>
+                                <th style="width: 60%;">شرح کامل فعالیت دفتر فنی (طراحی، متره و برآورد، رسیدگی به صورت وضعیت‌ها)</th>
+                                <th style="width: 35%;">توضیحات و ملاحظات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            $tasksRows
+                        </tbody>
+                    </table>
+
+                    <!-- 2. مصالح تخصصی وارده -->
+                    <div class="section-title">۲. آمار ورود مصالح تخصصی و متریال خاص به کارگاه</div>
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%;">ردیف</th>
+                                <th style="width: 35%;">نوع مصالح/کالا تخصصی وارده</th>
+                                <th style="width: 15%;">مقدار</th>
+                                <th style="width: 12%;">واحد</th>
+                                <th style="width: 33%;">توضیحات واردات و فرستنده</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            $technicalMaterialsRows
+                        </tbody>
+                    </table>
+
+                    <!-- 3. ماشین‌آلات -->
+                    <div class="section-title">۳. وضعیت تجهیزات دفتری، آزمایشی و ترابری واحد فنی</div>
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%;">ردیف</th>
+                                <th style="width: 35%;">نام و مدل تجهیزات</th>
+                                <th style="width: 12%;">فعال</th>
+                                <th style="width: 12%;">غیر فعال</th>
+                                <th style="width: 15%;">ساعت کارکرد</th>
+                                <th style="width: 21%;">توضیحات و وضعیت</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            $machineryRows
+                        </tbody>
+                    </table>
+
+                    <!-- 4. نیروی انسانی -->
+                    <div class="section-title">۴. آمار مهندسان، کارشناسان و پرسنل بخش دفتر فنی و کنترل پروژه</div>
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%;">ردیف</th>
+                                <th style="width: 35%;">سمت / تخصص</th>
+                                <th style="width: 25%;">نام سرپرست/مسئول تکنسین</th>
+                                <th style="width: 15%;">تعداد حاضر</th>
+                                <th style="width: 20%;">توضیحات کارکرد پرسنل</th>
                             </tr>
                         </thead>
                         <tbody>

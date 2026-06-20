@@ -14,19 +14,18 @@ android {
     applicationId = "com.aistudio.civilsync.uqwzye"
     minSdk = 23
     targetSdk = 36
-    versionCode = 2
-    versionName = "1.1"
+    versionCode = 4
+    versionName = "2.0.2"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
   signingConfigs {
     create("release") {
-      // پیدا کردن مسیر کی‌استور از متغیر محیطی گیت‌هاب، در غیر این صورت پیش‌فرض ریشه
-      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/release.keystore"
+      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
       storeFile = file(keystorePath)
-      storePassword = System.getenv("KEY_STORE_PASSWORD")
-      keyAlias = System.getenv("KEY_ALIAS") ?: "my-key-alias"
+      storePassword = System.getenv("STORE_PASSWORD")
+      keyAlias = "upload"
       keyPassword = System.getenv("KEY_PASSWORD")
     }
     create("debugConfig") {
@@ -43,15 +42,13 @@ android {
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       
-      // مستقیماً کانفیگ ریلیز رو اعمال کن؛ گریدل خودش متغیرها رو از محیط گیت‌هاب می‌خونه
-      signingConfig = signingConfigs.getByName("release")
-    }
-    debug {
-      if (file("${rootDir}/debug.keystore").exists()) {
-        signingConfig = signingConfigs.getByName("debugConfig")
+      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
+      if (file(keystorePath).exists()) {
+        signingConfig = signingConfigs.getByName("release")
+      } else {
+        signingConfig = null
       }
     }
-  }
     debug {
       if (file("${rootDir}/debug.keystore").exists()) {
         signingConfig = signingConfigs.getByName("debugConfig")
