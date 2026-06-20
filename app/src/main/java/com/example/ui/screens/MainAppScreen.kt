@@ -413,7 +413,7 @@ fun MainAppScreen(
                                             "EXECUTION" -> {
                                                 viewModel.startNewReport("EXECUTION")
                                                 currentScreen = ActiveScreen.ReportEditor
-                                                Toast.makeText(context, "گزارش فنی و اجرایی جدید ساخته شد 📝", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, "گزارش اجرایی جدید ساخته شد 📝", Toast.LENGTH_SHORT).show()
                                             }
                                             "WAREHOUSE" -> {
                                                 viewModel.startNewReport("WAREHOUSE")
@@ -484,7 +484,7 @@ fun MainAppScreen(
             val customTitle = remember { viewModel.sharedPreferences.getString("custom_unit_title", "سایر واحدها") ?: "سایر واحدها" }
             val reportTypesList = listOf(
                 Triple("TECHNICAL", "دفتر فنی", Icons.Default.Description),
-                Triple("EXECUTION", "فنی و اجرا", Icons.Default.Engineering),
+                Triple("EXECUTION", "اجرا", Icons.Default.Engineering),
                 Triple("WAREHOUSE", "انبارداری", Icons.Default.Warehouse),
                 Triple("SURVEY", "نقشه‌برداری", Icons.Default.Map),
                 Triple("LEGAL", "امور حقوقی", Icons.Default.Gavel),
@@ -824,7 +824,7 @@ fun MainAppScreen(
                                 ) {
                                     listOf(
                                         Triple("ASK", "همیشه بپرس", Icons.Default.Help),
-                                        Triple("EXECUTION", "فنی و اجرا", Icons.Default.Engineering),
+                                        Triple("EXECUTION", "اجرا", Icons.Default.Engineering),
                                         Triple("WAREHOUSE", "انبارداری", Icons.Default.Warehouse)
                                     ).forEach { (typeKey, typeLabel, typeIcon) ->
                                         val isSelected = defaultReportType == typeKey
@@ -1477,7 +1477,7 @@ fun MainAppScreen(
                                 .padding(horizontal = 16.dp, vertical = 6.dp)
                         ) {
                             Text(
-                                text = "نسخه جدید v2.4.0",
+                                text = "نسخه جدید v3.0.3",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color(0xFFD97706) // Dark Amber text
@@ -1511,7 +1511,7 @@ fun MainAppScreen(
                                     val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                         type = "text/plain"
                                         putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf("support@constructionapp.com"))
-                                        putExtra(android.content.Intent.EXTRA_SUBJECT, "پشتیبان آفلاین داده‌ها - نسخه جدید v2.4.0")
+                                        putExtra(android.content.Intent.EXTRA_SUBJECT, "پشتیبان آفلاین داده‌ها - نسخه جدید v3.0.3")
                                         putExtra(android.content.Intent.EXTRA_TEXT, "با سلام و احترام،\nپشتیبان داده‌های کارگاهی پیوست شده است:\n\n$backupJson")
                                     }
                                     context.startActivity(android.content.Intent.createChooser(intent, "ارسال اطلاعات پشتیبان"))
@@ -1815,11 +1815,14 @@ fun ReportListScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     val rType = report.reportType
+                                    val customUnitTitle = remember { viewModel.sharedPreferences.getString("custom_unit_title", "سایر واحدها") ?: "سایر واحدها" }
                                     val badgeIcon = when (rType) {
                                         "WAREHOUSE" -> Icons.Default.Warehouse
                                         "LEGAL" -> Icons.Default.Gavel
                                         "SURVEY" -> Icons.Default.Map
                                         "TECHNICAL" -> Icons.Default.Description
+                                        "HSE" -> Icons.Default.Warning
+                                        "CUSTOM" -> Icons.Default.Construction
                                         else -> Icons.Default.Engineering
                                     }
                                     val badgeBg = when (rType) {
@@ -1827,6 +1830,8 @@ fun ReportListScreen(
                                         "LEGAL" -> MaterialTheme.colorScheme.tertiaryContainer
                                         "SURVEY" -> MaterialTheme.colorScheme.surfaceVariant
                                         "TECHNICAL" -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
+                                        "HSE" -> MaterialTheme.colorScheme.errorContainer
+                                        "CUSTOM" -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
                                         else -> MaterialTheme.colorScheme.primaryContainer
                                     }
                                     val badgeTint = when (rType) {
@@ -1834,6 +1839,8 @@ fun ReportListScreen(
                                         "LEGAL" -> MaterialTheme.colorScheme.tertiary
                                         "SURVEY" -> MaterialTheme.colorScheme.onSurfaceVariant
                                         "TECHNICAL" -> MaterialTheme.colorScheme.primary
+                                        "HSE" -> MaterialTheme.colorScheme.error
+                                        "CUSTOM" -> MaterialTheme.colorScheme.tertiary
                                         else -> MaterialTheme.colorScheme.primary
                                     }
                                     val badgeLabel = when (rType) {
@@ -1841,7 +1848,9 @@ fun ReportListScreen(
                                         "LEGAL" -> "حقوقی و تملک"
                                         "SURVEY" -> "نقشه‌برداری"
                                         "TECHNICAL" -> "دفتر فنی"
-                                        else -> "فنی و اجرا"
+                                        "HSE" -> "ایمنی HSE"
+                                        "CUSTOM" -> customUnitTitle
+                                        else -> "اجرا"
                                     }
 
                                     // Senior UX/UI Vertical Profile Accent Ribbon
@@ -1983,13 +1992,18 @@ fun ReportEditorScreen(
     }
     
     val rType = report.reportType
+    val context = LocalContext.current
+    val sharedPreferences = remember { context.getSharedPreferences("app_settings", Context.MODE_PRIVATE) }
+    val customUnitTitle = remember(sharedPreferences) { sharedPreferences.getString("custom_unit_title", "سایر واحدها") ?: "سایر واحدها" }
     
-    // Choose tabs based on report categorization - Now exactly 6 tabs for all 4 profiles, highly uniform and stable!
+    // Choose tabs based on report categorization - Now exactly 6 tabs for all profiles, highly uniform and stable!
     val tabs = when (rType) {
         "WAREHOUSE" -> listOf("مشخصات انبار", "ورود مصالح", "خروج مصالح", "ماشین‌آلات انبار", "پرسنل انبار", "یادداشت‌ها")
         "LEGAL" -> listOf("مشخصات پایه", "تحصیل اراضی", "مجوزهای قانونی", "ماشین‌آلات", "کارشناسان پیگیری", "یادداشت‌ها")
         "SURVEY" -> listOf("مشخصات پایه", "کارهای برداشت", "پیش‌بینی فردا", "تجهیزات نقشه‌برداری", "پرسنل نقشه‌برداری", "یادداشت‌ها")
         "TECHNICAL" -> listOf("مشخصات پایه", "فعالیت دفتر فنی", "مصالح تخصصی", "ماشین‌آلات", "پرسنل فنی", "یادداشت‌ها")
+        "HSE" -> listOf("مشخصات پایه", "اقدامات ایمنی", "مصالح و اقلام ایمنی", "تجهیزات ایمنی", "پرسنل ایمنی", "یادداشت‌ها")
+        "CUSTOM" -> listOf("مشخصات پایه", "فعالیت‌های $customUnitTitle", "مصالح و اقلام اختصاصی", "تجهیزات و ابزار", "پرسنل واحد $customUnitTitle", "یادداشت‌ها")
         else -> listOf("مشخصات پایه", "فعالیت‌های اجرا", "ماشین‌آلات", "نیروها", "مصالح وارده", "یادداشت‌ها")
     }
 
@@ -2021,6 +2035,22 @@ fun ReportEditorScreen(
         "TECHNICAL" -> listOf(
             Icons.Default.Info,
             Icons.Default.Description,
+            Icons.Default.ShoppingCart,
+            Icons.Default.LocalShipping,
+            Icons.Default.Group,
+            Icons.Default.EditNote
+        )
+        "HSE" -> listOf(
+            Icons.Default.Info,
+            Icons.Default.Warning,
+            Icons.Default.ShoppingCart,
+            Icons.Default.LocalShipping,
+            Icons.Default.Group,
+            Icons.Default.EditNote
+        )
+        "CUSTOM" -> listOf(
+            Icons.Default.Info,
+            Icons.Default.Construction,
             Icons.Default.ShoppingCart,
             Icons.Default.LocalShipping,
             Icons.Default.Group,
@@ -2122,6 +2152,26 @@ fun ReportEditorScreen(
                         2 -> WarehouseMaterialsTab(report, isExit = false, onUpdateReport) // مصالح تخصصی وارده
                         3 -> MachineryTab(report, onUpdateReport)
                         4 -> ManpowerTab(report, onUpdateReport)
+                        5 -> NotesTab(report, onUpdateReport)
+                    }
+                }
+                "HSE" -> {
+                    when (selectedTab) {
+                        0 -> BaseInfoTab(report, onUpdateReport)
+                        1 -> TasksTab(report, onUpdateReport) // اقدامات ایمنی
+                        2 -> WarehouseMaterialsTab(report, isExit = false, onUpdateReport) // مصالح و تجهیزات ایمنی وارده
+                        3 -> MachineryTab(report, onUpdateReport) // تجهیزات ایمنی
+                        4 -> ManpowerTab(report, onUpdateReport) // پرسنل هماهنگی و افسران ایمنی
+                        5 -> NotesTab(report, onUpdateReport)
+                    }
+                }
+                "CUSTOM" -> {
+                    when (selectedTab) {
+                        0 -> BaseInfoTab(report, onUpdateReport)
+                        1 -> TasksTab(report, onUpdateReport) // فعالیت‌های واحد سفارشی تکمیلی
+                        2 -> WarehouseMaterialsTab(report, isExit = false, onUpdateReport) // ورود اقلام اختصاصی واحد
+                        3 -> MachineryTab(report, onUpdateReport) // ماشین‌آلات فعال این بخش
+                        4 -> ManpowerTab(report, onUpdateReport) // پرسنل واحد مربوطه
                         5 -> NotesTab(report, onUpdateReport)
                     }
                 }
@@ -2569,6 +2619,13 @@ fun TasksTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
     val isLegal = report.reportType == "LEGAL"
     val isSurvey = report.reportType == "SURVEY"
     val isTechnical = report.reportType == "TECHNICAL"
+    val isHse = report.reportType == "HSE"
+    val isCustom = report.reportType == "CUSTOM"
+    val hideMetrics = isTechnical || isHse || isCustom
+
+    val context = LocalContext.current
+    val sharedPreferences = remember { context.getSharedPreferences("app_settings", Context.MODE_PRIVATE) }
+    val customUnitTitle = remember(sharedPreferences) { sharedPreferences.getString("custom_unit_title", "سایر واحدها") ?: "سایر واحدها" }
 
     val popularUnits = when {
         isLegal -> listOf("مترمربع", "دهانه", "پلاک ثبتی", "باب مغازه", "فقره")
@@ -2580,7 +2637,7 @@ fun TasksTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
         unitInput = when {
             isLegal -> "مترمربع"
             isSurvey -> "نقطه"
-            isTechnical -> ""
+            isTechnical || isHse || isCustom -> ""
             else -> "مترمکعب"
         }
     }
@@ -2589,6 +2646,8 @@ fun TasksTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
         isLegal -> "ثبت روند تحصیل اراضی و رفع معارضین ملکی"
         isSurvey -> "ثبت آمار شیت‌ها و پیاده‌سازی نقشه‌برداری امروز"
         isTechnical -> "ثبت شرح فعالیت‌های دفتر فنی"
+        isHse -> "ثبت اقدامات و کنترل‌های ایمنی روزانه (HSE)"
+        isCustom -> "ثبت شرح فعالیت‌های واحد $customUnitTitle"
         else -> "افزودن فعالیت اجرایی انجام شده در کارگاه"
     }
 
@@ -2596,13 +2655,15 @@ fun TasksTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
         isLegal -> "شرح ملک معارض، پلاک ثبتی یا نام مالک زمین"
         isSurvey -> "شرح دقیق عملیات (برداشت باند، شات‌کریت، پیاده‌سازی)"
         isTechnical -> "شرح کامل فعالیت واحد فنی"
+        isHse -> "شرح اقدام یا کنترل ایمنی (مانند: گشت، آموزش)"
+        isCustom -> "شرح کامل فعالیت واحد $customUnitTitle"
         else -> "شرح کامل فعالیت (مثلا: آرماتوربندی سقف دوم)"
     }
 
     val locLabel = when {
         isLegal -> "محدوده حریم یا موقعیت کیلومتر مسیر"
         isSurvey -> "ایستگاه پایه مستقر یا پوینت بنچمارک"
-        else -> "محل دقیق یا کیلومتر"
+        else -> "محل حدودی"
     }
 
     val qtyLabel = when {
@@ -2614,6 +2675,8 @@ fun TasksTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
     val accLabel = when {
         isLegal -> "شرح آخرین وضعیت حقوقی یا ملاحظات ترخیص"
         isSurvey -> "ملاحظات تحویل موقت یا پین خطا"
+        isHse -> "توضیحات، دستورکار حفاظتی یا وضعیت رفع خظر"
+        isCustom -> "توضیحات، اقدامات ترویجی یا ملاحظات واحد"
         else -> "توضیحات"
     }
 
@@ -2637,8 +2700,14 @@ fun TasksTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
                 OutlinedTextField(
                     value = descInput,
                     onValueChange = { descInput = it },
-                    label = { Text("شرح کامل فعالیت") },
-                    placeholder = { Text("مثال: آرماتوربندی سقف دوم") },
+                    label = { Text(descLabel) },
+                    placeholder = { 
+                        Text(
+                            if (isHse) "مثال: کنترل لایف‌لاین جبهه کاری شمالی، گشت ایمنی..." 
+                            else if (isTechnical) "مثال: تهیه صورت‌جلسه کارگاهی، متره و برآورد..." 
+                            else "مثال: آرماتوربندی سقف دوم"
+                        )
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 12.dp)
@@ -2646,7 +2715,7 @@ fun TasksTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
                     shape = RoundedCornerShape(24.dp)
                 )
 
-                if (!isTechnical) {
+                if (!hideMetrics) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -2695,7 +2764,7 @@ fun TasksTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
                         OutlinedTextField(
                             value = locInput,
                             onValueChange = { locInput = it },
-                            label = { Text("محل دقیق یا کیلومتر") },
+                            label = { Text(locLabel) },
                             modifier = Modifier
                                 .weight(1f)
                                 .testTag("task_location_input"),
@@ -2778,8 +2847,14 @@ fun TasksTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
                     OutlinedTextField(
                         value = accInput,
                         onValueChange = { accInput = it },
-                        label = { Text("توضیحات و ملاحظات فعالیت فنی") },
-                        placeholder = { Text("ملاحظات صورت‌جلسه، شماره شیت، مترور یا محاسب مربوطه...") },
+                        label = { Text(accLabel) },
+                        placeholder = {
+                            Text(
+                                if (isHse) "نکات کلیدی، دستور کارهای ایمنی صادر شده یا وضعیت رفع خطر..."
+                                else if (isCustom) "توضیحات و جزئیات تکمیلی مربوط به اقدام واحد..."
+                                else "ملاحظات صورت‌جلسه، شماره شیت، مترور یا محاسب مربوطه..."
+                            )
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 12.dp)
@@ -5152,31 +5227,31 @@ fun ProjectDashboardTab(reportsCount: Int, reports: List<com.example.data.model.
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Info,
                         contentDescription = "اطلاعات و یادآوری‌ها",
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                     Text(
                         text = "خلاصه وضعیت کارگاه و یادآوری اکیپ‌ها 📌",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
+                        fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
                 // Item 1: Summary / Latest Activities
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -5188,7 +5263,7 @@ fun ProjectDashboardTab(reportsCount: Int, reports: List<com.example.data.model.
                         )
                         Text(
                             text = "خلاصه فعالیت‌های اخیر:",
-                            fontSize = 12.sp,
+                            fontSize = 11.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -5200,10 +5275,10 @@ fun ProjectDashboardTab(reportsCount: Int, reports: List<com.example.data.model.
                             ) {
                                 Text(
                                     text = "پیشنهاد هوشمند گزارش‌های قبلی ✨",
-                                    fontSize = 9.sp,
+                                    fontSize = 8.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                                 )
                             }
                         }
@@ -5214,28 +5289,28 @@ fun ProjectDashboardTab(reportsCount: Int, reports: List<com.example.data.model.
                                 summaryEditType = "RECENT"
                                 showEditSummaryDialog = true
                             },
-                            contentPadding = PaddingValues(0.dp)
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Edit, contentDescription = "ویرایش", modifier = Modifier.size(12.dp))
+                                Icon(Icons.Default.Edit, contentDescription = "ویرایش", modifier = Modifier.size(11.dp))
                                 Spacer(modifier = Modifier.width(2.dp))
-                                Text("ثبت/ویرایش", fontSize = 11.sp)
+                                Text("ثبت/ویرایش", fontSize = 10.sp)
                             }
                         }
                     }
                     Text(
                         text = displayRecent.ifEmpty { "هنوز هیچ خلاصه فعالیتی برای کارگاه ثبت نگردیده است. با فشردن دکمه ویرایش می‌توانید آن را بنویسید ✍️" },
-                        fontSize = 11.5.sp,
+                        fontSize = 11.sp,
                         color = if (displayRecent.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
-                        lineHeight = 18.sp,
-                        modifier = Modifier.padding(horizontal = 12.dp)
+                        lineHeight = 15.sp,
+                        modifier = Modifier.padding(horizontal = 10.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
 
                 // Item 2: Forecast of tomorrow's activities / reminder
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -5247,7 +5322,7 @@ fun ProjectDashboardTab(reportsCount: Int, reports: List<com.example.data.model.
                         )
                         Text(
                             text = "پیش‌بینی فعالیت‌ها و یادآوری فردا:",
-                            fontSize = 12.sp,
+                            fontSize = 11.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -5259,10 +5334,10 @@ fun ProjectDashboardTab(reportsCount: Int, reports: List<com.example.data.model.
                             ) {
                                 Text(
                                     text = "پیش‌بینی خودکار گزارش قبلی 🔮",
-                                    fontSize = 9.sp,
+                                    fontSize = 8.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                                 )
                             }
                         }
@@ -5273,21 +5348,21 @@ fun ProjectDashboardTab(reportsCount: Int, reports: List<com.example.data.model.
                                 summaryEditType = "FORECAST"
                                 showEditSummaryDialog = true
                             },
-                            contentPadding = PaddingValues(0.dp)
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Edit, contentDescription = "ویرایش", modifier = Modifier.size(12.dp))
+                                Icon(Icons.Default.Edit, contentDescription = "ویرایش", modifier = Modifier.size(11.dp))
                                 Spacer(modifier = Modifier.width(2.dp))
-                                Text("ثبت/ویرایش", fontSize = 11.sp)
+                                Text("ثبت/ویرایش", fontSize = 10.sp)
                             }
                         }
                     }
                     Text(
                         text = displayForecast.ifEmpty { "هنوز هیچ پیش‌بینی فعالیتی برای روز آینده ثبت نگردیده است. با فشردن دکمه ویرایش می‌توانید آن را بنویسید ✍️" },
-                        fontSize = 11.5.sp,
+                        fontSize = 11.sp,
                         color = if (displayForecast.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
-                        lineHeight = 18.sp,
-                        modifier = Modifier.padding(horizontal = 12.dp)
+                        lineHeight = 15.sp,
+                        modifier = Modifier.padding(horizontal = 10.dp)
                     )
                 }
             }
@@ -5547,7 +5622,7 @@ fun ProjectSettingsTab(
                     ) {
                         listOf(
                             Triple("ASK", "همیشه بپرس", Icons.Default.Help),
-                            Triple("EXECUTION", "فنی و اجرا", Icons.Default.Engineering),
+                            Triple("EXECUTION", "اجرا", Icons.Default.Engineering),
                             Triple("WAREHOUSE", "انبارداری", Icons.Default.Warehouse)
                         ).forEach { (typeKey, typeLabel, typeIcon) ->
                             val isSelected = defaultReportType == typeKey
@@ -6139,7 +6214,7 @@ fun AboutAppTab(viewModel: ReportViewModel) {
                 border = BorderStroke(1.dp, Color(0xFFF59E0B)),
             ) {
                 Text(
-                    text = "نسخه ۲.۰.۲",
+                    text = "نسخه ۳.۰.۳",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFFD97706),
@@ -6186,7 +6261,7 @@ fun AboutAppTab(viewModel: ReportViewModel) {
                         type = "message/rfc822"
                         putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf("MOSTAFA5804@GMAIL.COM"))
                         putExtra(android.content.Intent.EXTRA_SUBJECT, "بازخورد و ارتباط با سازنده سامانه گزارش یار")
-                        putExtra(android.content.Intent.EXTRA_TEXT, "با سلام و احترام،\nبازخورد من درباره برنامه سامانه گزارش یار کارگاه نسخه ۲.۰.۲:\n\n")
+                        putExtra(android.content.Intent.EXTRA_TEXT, "با سلام و احترام،\nبازخورد من درباره برنامه سامانه گزارش یار کارگاه نسخه ۳.۰.۳:\n\n")
                     }
                     context.startActivity(android.content.Intent.createChooser(intent, "ارسال ایمیل به سازنده"))
                 } catch (e: Exception) {
@@ -6222,7 +6297,7 @@ fun AboutAppTab(viewModel: ReportViewModel) {
                     val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                         type = "message/rfc822"
                         putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf("MOSTAFA5804@GMAIL.COM"))
-                        putExtra(android.content.Intent.EXTRA_SUBJECT, "پشتیبان داده‌های سامانه گزارش یار - نسخه ۲.۰")
+                        putExtra(android.content.Intent.EXTRA_SUBJECT, "پشتیبان داده‌های سامانه گزارش یار - نسخه ۳.۰.۳")
                         putExtra(android.content.Intent.EXTRA_TEXT, "با سلام،\nپشتیبان داده‌های کارگاه ساختمانی من پیوست شده است:")
                         putExtra(android.content.Intent.EXTRA_STREAM, fileUri)
                         addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)

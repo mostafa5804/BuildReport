@@ -20,7 +20,7 @@ object PdfGenerator {
             "TECHNICAL" -> "گزارش روزانه دفتر فنی کارگاه"
             "HSE" -> "گزارش روزانه واحد ایمنی HSE کارگاه"
             "CUSTOM" -> "گزارش روزانه واحد $customUnitTitle"
-            else -> "گزارش روزانه فعالیت‌های فنی و اجرایی کارگاه"
+            else -> "گزارش روزانه فعالیت‌های اجرایی کارگاه"
         }
 
         // Shared machinery rows helper
@@ -719,7 +719,7 @@ object PdfGenerator {
             else -> {
                 // Execution report layout
                 val tasksRows = if (report.tasks.isEmpty()) {
-                    "<tr><td colspan='6' class='text-muted'>هیچ فعالیت فنی و اجرایی در این تاریخ ثبت نشده است</td></tr>"
+                    "<tr><td colspan='6' class='text-muted'>هیچ فعالیت اجرایی در این تاریخ ثبت نشده است</td></tr>"
                 } else {
                     report.tasks.mapIndexed { index, task ->
                         val locText = if (task.startKm.isNotEmpty() || task.endKm.isNotEmpty()) {
@@ -742,7 +742,7 @@ object PdfGenerator {
 
                 bodyContentHtml = """
                     <!-- 1. شرح کارها -->
-                    <div class="section-title">۱. خلاصه شرح کار و فعالیت‌های فنی و اجرایی کارگاه</div>
+                    <div class="section-title">۱. خلاصه شرح کار و فعالیت‌های اجرایی کارگاه</div>
                     <table class="report-table">
                         <thead>
                             <tr>
