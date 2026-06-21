@@ -2212,77 +2212,105 @@ private fun getTodayShamsi(): Triple<Int, Int, Int> {
     val gm = calendar.get(java.util.Calendar.MONTH) + 1
     val gd = calendar.get(java.util.Calendar.DAY_OF_MONTH)
     
-    val gDaysInMonth = intArrayOf(0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
-    var gDayNo = 365 * (gy - 1867) + (gy - 1867) / 4 - (gy - 1867) / 100 + (gy - 1867) / 400
-    for (i in 1 until gm) {
+    val gDaysInMonth = intArrayOf(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+    val jDaysInMonth = intArrayOf(31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29)
+    
+    val gy2 = gy - 1600
+    val gm2 = gm - 1
+    val gd2 = gd - 1
+    
+    var gDayNo = 365 * gy2 + (gy2 + 3) / 4 - (gy2 + 99) / 100 + (gy2 + 399) / 400
+    for (i in 0 until gm2) {
         gDayNo += gDaysInMonth[i]
     }
-    if (gm > 2 && ((gy % 4 == 0 && gy % 100 != 0) || (gy % 400 == 0))) {
+    if (gm2 > 1 && ((gy % 4 == 0 && gy % 100 != 0) || (gy % 400 == 0))) {
         gDayNo++
     }
-    gDayNo += gd - 1
-    var jDayNo = gDayNo - 737242
+    gDayNo += gd2
+    
+    var jDayNo = gDayNo - 79
     val jNP = jDayNo / 12053
     jDayNo %= 12053
+    
     var jy = 979 + 33 * jNP + 4 * (jDayNo / 1461)
     jDayNo %= 1461
+    
     if (jDayNo >= 366) {
         jy += (jDayNo - 1) / 365
         jDayNo = (jDayNo - 1) % 365
     }
-    val jm: Int
-    val jd: Int
-    if (jDayNo < 186) {
-        jm = 1 + jDayNo / 31
-        jd = 1 + jDayNo % 31
-    } else {
-        jm = 7 + (jDayNo - 186) / 30
-        jd = 1 + (jDayNo - 186) % 30
+    
+    var jm = 0
+    while (jm < 12 && jDayNo >= jDaysInMonth[jm]) {
+        if (jm == 11) {
+            val isLeap = (jy == 1403 || jy == 1407 || jy == 1411 || jy == 1399 || (jy - 1399) % 4 == 0)
+            val esfandDays = if (isLeap) 30 else 29
+            if (jDayNo >= esfandDays) {
+                jDayNo -= esfandDays
+                jm++
+            } else {
+                break
+            }
+        } else {
+            jDayNo -= jDaysInMonth[jm]
+            jm++
+        }
     }
-    return Triple(jy, jm, jd)
+    
+    return Triple(jy, jm + 1, jDayNo + 1)
 }
 
 private fun jalaliToGregorian(jy: Int, jm: Int, jd: Int): java.util.Calendar {
-    val jy2 = jy + 1595
-    var days = -350278 + 365 * jy2 + (jy2 / 33) * 8 + (jy2 % 33 + 3) / 4
-    for (i in 0 until jm - 1) {
+    val jalaliYear = jy - 979
+    val jalaliMonth = jm - 1
+    val jalaliDay = jd - 1
+
+    var jalaliDayNo = 365 * jalaliYear + (jalaliYear / 33) * 8 + (jalaliYear % 33 + 3) / 4
+    for (i in 0 until jalaliMonth) {
         if (i < 6) {
-            days += 31
+            jalaliDayNo += 31
         } else {
-            days += 30
+            jalaliDayNo += 30
         }
     }
-    days += jd
-    
-    var gYear = 100 + 4 * (days / 146097)
-    var gDays = days % 146097
-    if (gDays >= 36525) {
-        gDays--
-        gYear += 100 * (gDays / 36524)
-        gDays %= 36524
-        if (gDays >= 365) {
-            gDays++
+    jalaliDayNo += jalaliDay
+
+    var gregorianDayNo = jalaliDayNo + 79
+    var gYear = 1600 + 400 * (gregorianDayNo / 146097)
+    gregorianDayNo %= 146097
+
+    var leap = true
+    if (gregorianDayNo >= 36525) {
+        gregorianDayNo--
+        gYear += 100 * (gregorianDayNo / 36524)
+        gregorianDayNo %= 36524
+        if (gregorianDayNo >= 365) {
+            gregorianDayNo++
+        } else {
+            leap = false
         }
     }
-    gYear += 4 * (gDays / 1461)
-    gDays %= 1461
-    if (gDays >= 366) {
-        gDays--
-        gYear += gDays / 365
-        gDays %= 365
+
+    gYear += 4 * (gregorianDayNo / 1461)
+    gregorianDayNo %= 1461
+
+    if (gregorianDayNo >= 366) {
+        leap = false
+        gregorianDayNo--
+        gYear += gregorianDayNo / 365
+        gregorianDayNo %= 365
     }
+
+    var i = 0
+    val gDaysInMonth = intArrayOf(31, if (gYear % 4 == 0 && (gYear % 100 != 0 || gYear % 400 == 0)) 29 else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+    while (gregorianDayNo >= gDaysInMonth[i]) {
+        gregorianDayNo -= gDaysInMonth[i]
+        i++
+    }
+
     val calendar = java.util.GregorianCalendar(java.util.Locale.US)
-    calendar.set(java.util.Calendar.YEAR, gYear)
-    val leap = (gYear % 4 == 0 && gYear % 100 != 0) || (gYear % 400 == 0)
-    val gDaysInMonth = intArrayOf(31, if (leap) 29 else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
-    var m = 0
-    var d = gDays + 1
-    while (m < 12 && d > gDaysInMonth[m]) {
-        d -= gDaysInMonth[m]
-        m++
-    }
-    calendar.set(java.util.Calendar.MONTH, m)
-    calendar.set(java.util.Calendar.DAY_OF_MONTH, d)
+    calendar.clear()
+    calendar.set(gYear, i, gregorianDayNo + 1)
     return calendar
 }
 
@@ -2415,28 +2443,47 @@ fun BaseInfoTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.Bottom
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Year Selector
                         Column(modifier = Modifier.weight(1.2f)) {
-                            Text("سال", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 2.dp))
                             var expandedYear by remember { mutableStateOf(false) }
                             Box(modifier = Modifier.fillMaxWidth()) {
-                                OutlinedButton(
-                                    onClick = { expandedYear = true },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
-                                    shape = RoundedCornerShape(8.dp)
-                                ) {
-                                    Text(toPersianNum(selectedYear), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
+                                OutlinedTextField(
+                                    value = toPersianNum(selectedYear),
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("سال", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) },
+                                    trailingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowDropDown,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.clickable { expandedYear = true }
+                                        )
+                                    },
+                                    modifier = Modifier.fillMaxWidth().clickable { expandedYear = true },
+                                    shape = RoundedCornerShape(8.dp),
+                                    singleLine = true,
+                                    textStyle = androidx.compose.ui.text.TextStyle(
+                                        textAlign = TextAlign.Center,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                )
                                 DropdownMenu(
                                     expanded = expandedYear,
-                                    onDismissRequest = { expandedYear = false }
+                                    onDismissRequest = { expandedYear = false },
+                                    modifier = Modifier.fillMaxWidth(0.3f)
                                 ) {
-                                    listOf(1402, 1403, 1404, 1405, 1406, 1407, 1408).forEach { yr ->
+                                    (1400..1410).forEach { yr ->
                                         DropdownMenuItem(
-                                            text = { Text(toPersianNum(yr), fontSize = 12.sp) },
+                                            text = {
+                                                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                                    Text(toPersianNum(yr), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                                }
+                                            },
                                             onClick = {
                                                 selectedYear = yr
                                                 expandedYear = false
@@ -2449,30 +2496,43 @@ fun BaseInfoTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
 
                         // Month Selector
                         Column(modifier = Modifier.weight(1.8f)) {
-                            Text("ماه", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 2.dp))
                             var expandedMonth by remember { mutableStateOf(false) }
                             Box(modifier = Modifier.fillMaxWidth()) {
-                                OutlinedButton(
-                                    onClick = { expandedMonth = true },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
-                                    shape = RoundedCornerShape(8.dp)
-                                ) {
-                                    Text(
-                                        text = monthsPersian.getOrNull(selectedMonth - 1) ?: selectedMonth.toString(),
+                                OutlinedTextField(
+                                    value = monthsPersian.getOrNull(selectedMonth - 1) ?: selectedMonth.toString(),
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("ماه", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) },
+                                    trailingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowDropDown,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.clickable { expandedMonth = true }
+                                        )
+                                    },
+                                    modifier = Modifier.fillMaxWidth().clickable { expandedMonth = true },
+                                    shape = RoundedCornerShape(8.dp),
+                                    singleLine = true,
+                                    textStyle = androidx.compose.ui.text.TextStyle(
+                                        textAlign = TextAlign.Center,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
-                                }
+                                )
                                 DropdownMenu(
                                     expanded = expandedMonth,
-                                    onDismissRequest = { expandedMonth = false }
+                                    onDismissRequest = { expandedMonth = false },
+                                    modifier = Modifier.fillMaxWidth(0.5f)
                                 ) {
                                     monthsPersian.forEachIndexed { idx, name ->
                                         DropdownMenuItem(
-                                            text = { Text(name, fontSize = 12.sp) },
+                                            text = {
+                                                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                                    Text(name, fontSize = 11.sp)
+                                                }
+                                            },
                                             onClick = {
                                                 selectedMonth = idx + 1
                                                 expandedMonth = false
@@ -2485,6 +2545,7 @@ fun BaseInfoTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
 
                         // Today Button
                         Column(modifier = Modifier.weight(1.2f)) {
+                            Spacer(modifier = Modifier.height(6.dp))
                             OutlinedButton(
                                 onClick = {
                                     val t = getTodayShamsi()
@@ -2492,7 +2553,7 @@ fun BaseInfoTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
                                     selectedMonth = t.second
                                     selectedDay = t.third
                                 },
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().height(50.dp),
                                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
                                 shape = RoundedCornerShape(8.dp),
                                 colors = ButtonDefaults.outlinedButtonColors(

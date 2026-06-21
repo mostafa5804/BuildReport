@@ -204,34 +204,51 @@ class ReportViewModel(
     }
 
     private fun gregorianToJalali(gy: Int, gm: Int, gd: Int): IntArray {
-        val gDaysInMonth = intArrayOf(0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
-        var gDayNo = 365 * (gy - 1867) + (gy - 1867) / 4 - (gy - 1867) / 100 + (gy - 1867) / 400
-        for (i in 1 until gm) {
+        val gDaysInMonth = intArrayOf(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+        val jDaysInMonth = intArrayOf(31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29)
+        
+        val gy2 = gy - 1600
+        val gm2 = gm - 1
+        val gd2 = gd - 1
+        
+        var gDayNo = 365 * gy2 + (gy2 + 3) / 4 - (gy2 + 99) / 100 + (gy2 + 399) / 400
+        for (i in 0 until gm2) {
             gDayNo += gDaysInMonth[i]
         }
-        if (gm > 2 && ((gy % 4 == 0 && gy % 100 != 0) || (gy % 400 == 0))) {
+        if (gm2 > 1 && ((gy % 4 == 0 && gy % 100 != 0) || (gy % 400 == 0))) {
             gDayNo++
         }
-        gDayNo += gd - 1
-        var jDayNo = gDayNo - 737242
+        gDayNo += gd2
+        
+        var jDayNo = gDayNo - 79
         val jNP = jDayNo / 12053
         jDayNo %= 12053
+        
         var jy = 979 + 33 * jNP + 4 * (jDayNo / 1461)
         jDayNo %= 1461
+        
         if (jDayNo >= 366) {
             jy += (jDayNo - 1) / 365
             jDayNo = (jDayNo - 1) % 365
         }
-        val jm: Int
-        val jd: Int
-        if (jDayNo < 186) {
-            jm = 1 + jDayNo / 31
-            jd = 1 + jDayNo % 31
-        } else {
-            jm = 7 + (jDayNo - 186) / 30
-            jd = 1 + (jDayNo - 186) % 30
+        
+        var jm = 0
+        while (jm < 12 && jDayNo >= jDaysInMonth[jm]) {
+            if (jm == 11) {
+                val isLeap = (jy == 1403 || jy == 1407 || jy == 1411 || jy == 1399 || (jy - 1399) % 4 == 0)
+                val esfandDays = if (isLeap) 30 else 29
+                if (jDayNo >= esfandDays) {
+                    jDayNo -= esfandDays
+                    jm++
+                } else {
+                    break
+                }
+            } else {
+                jDayNo -= jDaysInMonth[jm]
+                jm++
+            }
         }
-        return intArrayOf(jy, jm, jd)
+        return intArrayOf(jy, jm + 1, jDayNo + 1)
     }
 
     private fun toPersianDigits(num: Int): String {
