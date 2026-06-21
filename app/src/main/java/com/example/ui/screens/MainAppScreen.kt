@@ -258,13 +258,27 @@ fun MainAppScreen(
                                 color = Color.White.copy(alpha = 0.9f),
                                 modifier = Modifier.size(34.dp)
                             ) {
+                                val topBarIcon = if (currentScreen is ActiveScreen.ReportEditor) {
+                                    when (currentReport?.reportType) {
+                                        "WAREHOUSE" -> Icons.Default.Warehouse
+                                        "LEGAL" -> Icons.Default.Gavel
+                                        "SURVEY" -> Icons.Default.Map
+                                        "TECHNICAL" -> Icons.Default.Description
+                                        "HSE" -> Icons.Default.Warning
+                                        "CUSTOM" -> Icons.Default.Construction
+                                        else -> Icons.Default.Engineering
+                                    }
+                                } else {
+                                    Icons.Default.Engineering
+                                }
                                 Icon(
-                                    imageVector = Icons.Default.Engineering,
+                                    imageVector = topBarIcon,
                                     contentDescription = "آیکون مهندسی کارگاه",
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.padding(4.dp)
                                 )
                             }
+                            val customUnitTitle = remember { viewModel.sharedPreferences.getString("custom_unit_title", "سایر واحدها") ?: "سایر واحدها" }
                             Text(
                                 text = if (currentScreen is ActiveScreen.ReportEditor) {
                                     when (currentReport?.reportType) {
@@ -272,6 +286,8 @@ fun MainAppScreen(
                                         "LEGAL" -> "ویرایش گزارش حقوقی"
                                         "SURVEY" -> "ویرایش گزارش نقشه‌برداری"
                                         "TECHNICAL" -> "ویرایش گزارش دفتر فنی"
+                                        "HSE" -> "ویرایش گزارش ایمنی HSE"
+                                        "CUSTOM" -> "ویرایش گزارش $customUnitTitle"
                                         else -> "ویرایش گزارش اجرا"
                                     }
                                 } else {
@@ -1477,7 +1493,7 @@ fun MainAppScreen(
                                 .padding(horizontal = 16.dp, vertical = 6.dp)
                         ) {
                             Text(
-                                text = "نسخه جدید v3.0.3",
+                                text = "نسخه جدید v3.0.4",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color(0xFFD97706) // Dark Amber text
@@ -1511,7 +1527,7 @@ fun MainAppScreen(
                                     val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                         type = "text/plain"
                                         putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf("support@constructionapp.com"))
-                                        putExtra(android.content.Intent.EXTRA_SUBJECT, "پشتیبان آفلاین داده‌ها - نسخه جدید v3.0.3")
+                                        putExtra(android.content.Intent.EXTRA_SUBJECT, "پشتیبان آفلاین داده‌ها - نسخه جدید v3.0.4")
                                         putExtra(android.content.Intent.EXTRA_TEXT, "با سلام و احترام،\nپشتیبان داده‌های کارگاهی پیوست شده است:\n\n$backupJson")
                                     }
                                     context.startActivity(android.content.Intent.createChooser(intent, "ارسال اطلاعات پشتیبان"))
@@ -2190,15 +2206,131 @@ fun ReportEditorScreen(
     }
 }
 
+private fun getTodayShamsi(): Triple<Int, Int, Int> {
+    val calendar = java.util.GregorianCalendar(java.util.Locale.US)
+    val gy = calendar.get(java.util.Calendar.YEAR)
+    val gm = calendar.get(java.util.Calendar.MONTH) + 1
+    val gd = calendar.get(java.util.Calendar.DAY_OF_MONTH)
+    
+    val gDaysInMonth = intArrayOf(0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+    var gDayNo = 365 * (gy - 1867) + (gy - 1867) / 4 - (gy - 1867) / 100 + (gy - 1867) / 400
+    for (i in 1 until gm) {
+        gDayNo += gDaysInMonth[i]
+    }
+    if (gm > 2 && ((gy % 4 == 0 && gy % 100 != 0) || (gy % 400 == 0))) {
+        gDayNo++
+    }
+    gDayNo += gd - 1
+    var jDayNo = gDayNo - 737242
+    val jNP = jDayNo / 12053
+    jDayNo %= 12053
+    var jy = 979 + 33 * jNP + 4 * (jDayNo / 1461)
+    jDayNo %= 1461
+    if (jDayNo >= 366) {
+        jy += (jDayNo - 1) / 365
+        jDayNo = (jDayNo - 1) % 365
+    }
+    val jm: Int
+    val jd: Int
+    if (jDayNo < 186) {
+        jm = 1 + jDayNo / 31
+        jd = 1 + jDayNo % 31
+    } else {
+        jm = 7 + (jDayNo - 186) / 30
+        jd = 1 + (jDayNo - 186) % 30
+    }
+    return Triple(jy, jm, jd)
+}
+
+private fun jalaliToGregorian(jy: Int, jm: Int, jd: Int): java.util.Calendar {
+    val jy2 = jy + 1595
+    var days = -350278 + 365 * jy2 + (jy2 / 33) * 8 + (jy2 % 33 + 3) / 4
+    for (i in 0 until jm - 1) {
+        if (i < 6) {
+            days += 31
+        } else {
+            days += 30
+        }
+    }
+    days += jd
+    
+    var gYear = 100 + 4 * (days / 146097)
+    var gDays = days % 146097
+    if (gDays >= 36525) {
+        gDays--
+        gYear += 100 * (gDays / 36524)
+        gDays %= 36524
+        if (gDays >= 365) {
+            gDays++
+        }
+    }
+    gYear += 4 * (gDays / 1461)
+    gDays %= 1461
+    if (gDays >= 366) {
+        gDays--
+        gYear += gDays / 365
+        gDays %= 365
+    }
+    val calendar = java.util.GregorianCalendar(java.util.Locale.US)
+    calendar.set(java.util.Calendar.YEAR, gYear)
+    val leap = (gYear % 4 == 0 && gYear % 100 != 0) || (gYear % 400 == 0)
+    val gDaysInMonth = intArrayOf(31, if (leap) 29 else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+    var m = 0
+    var d = gDays + 1
+    while (m < 12 && d > gDaysInMonth[m]) {
+        d -= gDaysInMonth[m]
+        m++
+    }
+    calendar.set(java.util.Calendar.MONTH, m)
+    calendar.set(java.util.Calendar.DAY_OF_MONTH, d)
+    return calendar
+}
+
+private fun getPersianWeekdayIndex(calendar: java.util.Calendar): Int {
+    val dayOfWeek = calendar.get(java.util.Calendar.DAY_OF_WEEK)
+    return when (dayOfWeek) {
+        java.util.Calendar.SATURDAY -> 0
+        java.util.Calendar.SUNDAY -> 1
+        java.util.Calendar.MONDAY -> 2
+        java.util.Calendar.TUESDAY -> 3
+        java.util.Calendar.WEDNESDAY -> 4
+        java.util.Calendar.THURSDAY -> 5
+        java.util.Calendar.FRIDAY -> 6
+        else -> 0
+    }
+}
+
+private fun getMaxDays(year: Int, month: Int): Int {
+    return when {
+        month <= 6 -> 31
+        month <= 11 -> 30
+        else -> {
+            if (year == 1403 || year == 1407 || year == 1411 || year == 1399) 30 else 29
+        }
+    }
+}
+
+private fun toPersianNum(num: Int): String {
+    val persianDigits = charArrayOf('۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹')
+    return num.toString().map { c -> if (c.isDigit()) persianDigits[c - '0'] else c }.joinToString("")
+}
+
+private data class CalendarCell(
+    val day: Int,
+    val isCurrentMonth: Boolean,
+    val dateForCell: Triple<Int, Int, Int>
+)
+
 @Composable
 fun BaseInfoTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
     var showWeatherPickerForActiveReport by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
 
     if (showDatePicker) {
-        var selectedYear by remember { mutableStateOf(1405) }
-        var selectedMonth by remember { mutableStateOf(3) }
-        var selectedDay by remember { mutableStateOf(15) }
+        val today = remember { getTodayShamsi() }
+        var selectedYear by remember { mutableStateOf(today.first) }
+        var selectedMonth by remember { mutableStateOf(today.second) }
+        var selectedDay by remember { mutableStateOf(today.third) }
 
         // Try to parse the existing Shamsi date to populate selectors
         LaunchedEffect(report.date) {
@@ -2230,6 +2362,32 @@ fun BaseInfoTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
             "مهر (۰۷)", "آبان (۰۸)", "آذر (۰۹)", "دی (۱۰)", "بهمن (۱۱)", "اسفند (۱۲)"
         )
 
+        val cells = remember(selectedYear, selectedMonth) {
+            val list = mutableListOf<CalendarCell>()
+            val prevMonth = if (selectedMonth == 1) 12 else selectedMonth - 1
+            val prevYear = if (selectedMonth == 1) selectedYear - 1 else selectedYear
+            val prevMonthMaxDays = getMaxDays(prevYear, prevMonth)
+            
+            val firstDayCal = jalaliToGregorian(selectedYear, selectedMonth, 1)
+            val startDayOfWeek = getPersianWeekdayIndex(firstDayCal)
+            val currentMaxDays = getMaxDays(selectedYear, selectedMonth)
+            
+            for (i in (prevMonthMaxDays - startDayOfWeek + 1)..prevMonthMaxDays) {
+                list.add(CalendarCell(i, false, Triple(prevYear, prevMonth, i)))
+            }
+            for (i in 1..currentMaxDays) {
+                list.add(CalendarCell(i, true, Triple(selectedYear, selectedMonth, i)))
+            }
+            val totalCellsSoFar = list.size
+            val remaining = if (totalCellsSoFar <= 35) 35 - totalCellsSoFar else 42 - totalCellsSoFar
+            val nextMonth = if (selectedMonth == 12) 1 else selectedMonth + 1
+            val nextYear = if (selectedMonth == 12) selectedYear + 1 else selectedYear
+            for (i in 1..remaining) {
+                list.add(CalendarCell(i, false, Triple(nextYear, nextMonth, i)))
+            }
+            list
+        }
+
         AlertDialog(
             onDismissRequest = { showDatePicker = false },
             title = {
@@ -2245,22 +2403,23 @@ fun BaseInfoTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "سال، ماه و روز را برای ثبت در گزارش انتخاب کنید:",
-                        fontSize = 12.sp,
+                        text = "سال، ماه و روز مورد نظر خود را از تقویم زیر مشخص کنید:",
+                        fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        lineHeight = 18.sp
+                        lineHeight = 16.sp
                     )
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.Bottom
                     ) {
-                        // Year
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("سال", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 2.dp))
+                        // Year Selector
+                        Column(modifier = Modifier.weight(1.2f)) {
+                            Text("سال", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 2.dp))
                             var expandedYear by remember { mutableStateOf(false) }
                             Box(modifier = Modifier.fillMaxWidth()) {
                                 OutlinedButton(
@@ -2269,7 +2428,7 @@ fun BaseInfoTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
                                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
-                                    Text(selectedYear.toString(), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text(toPersianNum(selectedYear), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                 }
                                 DropdownMenu(
                                     expanded = expandedYear,
@@ -2277,7 +2436,7 @@ fun BaseInfoTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
                                 ) {
                                     listOf(1402, 1403, 1404, 1405, 1406, 1407, 1408).forEach { yr ->
                                         DropdownMenuItem(
-                                            text = { Text(yr.toString(), fontSize = 13.sp) },
+                                            text = { Text(toPersianNum(yr), fontSize = 12.sp) },
                                             onClick = {
                                                 selectedYear = yr
                                                 expandedYear = false
@@ -2288,9 +2447,9 @@ fun BaseInfoTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
                             }
                         }
 
-                        // Month
-                        Column(modifier = Modifier.weight(1.5f)) {
-                            Text("ماه", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 2.dp))
+                        // Month Selector
+                        Column(modifier = Modifier.weight(1.8f)) {
+                            Text("ماه", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 2.dp))
                             var expandedMonth by remember { mutableStateOf(false) }
                             Box(modifier = Modifier.fillMaxWidth()) {
                                 OutlinedButton(
@@ -2324,32 +2483,99 @@ fun BaseInfoTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
                             }
                         }
 
-                        // Day
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("روز", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 2.dp))
-                            var expandedDay by remember { mutableStateOf(false) }
-                            Box(modifier = Modifier.fillMaxWidth()) {
-                                OutlinedButton(
-                                    onClick = { expandedDay = true },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
-                                    shape = RoundedCornerShape(8.dp)
+                        // Today Button
+                        Column(modifier = Modifier.weight(1.2f)) {
+                            OutlinedButton(
+                                onClick = {
+                                    val t = getTodayShamsi()
+                                    selectedYear = t.first
+                                    selectedMonth = t.second
+                                    selectedDay = t.third
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.primary
+                                )
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
                                 ) {
-                                    Text(selectedDay.toString(), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Icon(
+                                        imageVector = Icons.Default.Today,
+                                        contentDescription = "امروز",
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(2.dp))
+                                    Text("امروز", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                 }
-                                DropdownMenu(
-                                    expanded = expandedDay,
-                                    onDismissRequest = { expandedDay = false }
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    // Calendar Grid Display in Persian RTL Format
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                            // Day Headers
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                listOf("ش", "ی", "د", "س", "چ", "پ", "ج").forEach { wd ->
+                                    Text(
+                                        text = wd,
+                                        modifier = Modifier.weight(1f),
+                                        textAlign = TextAlign.Center,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = if (wd == "ج") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                                    )
+                                }
+                            }
+
+                            // Calendar Days Cells
+                            cells.chunked(7).forEach { week ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    val maxDays = if (selectedMonth <= 6) 31 else if (selectedMonth <= 11) 30 else 29
-                                    (1..maxDays).forEach { dy ->
-                                        DropdownMenuItem(
-                                            text = { Text(dy.toString(), fontSize = 13.sp) },
-                                            onClick = {
-                                                selectedDay = dy
-                                                expandedDay = false
-                                            }
-                                        )
+                                    week.forEach { cell ->
+                                        val isSelected = cell.isCurrentMonth && cell.day == selectedDay
+                                        
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .aspectRatio(1f)
+                                                .padding(2.dp)
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(
+                                                    if (isSelected) MaterialTheme.colorScheme.primary
+                                                    else Color.Transparent
+                                                )
+                                                .clickable(enabled = cell.isCurrentMonth) {
+                                                    selectedDay = cell.day
+                                                },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = toPersianNum(cell.day),
+                                                fontSize = 12.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                color = when {
+                                                    isSelected -> MaterialTheme.colorScheme.onPrimary
+                                                    !cell.isCurrentMonth -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
+                                                    else -> MaterialTheme.colorScheme.onSurface
+                                                }
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -2502,6 +2728,7 @@ fun BaseInfoTab(report: DailyReport, onUpdateReport: (DailyReport) -> Unit) {
                             value = report.date,
                             onValueChange = { onUpdateReport(report.copy(date = it)) },
                             label = { Text("تاریخ روز") },
+                            placeholder = { Text("مثال: ۱۴۰۵/۰۳/۱۵") },
                             trailingIcon = {
                                 IconButton(onClick = { showDatePicker = true }) {
                                     Icon(
@@ -6214,7 +6441,7 @@ fun AboutAppTab(viewModel: ReportViewModel) {
                 border = BorderStroke(1.dp, Color(0xFFF59E0B)),
             ) {
                 Text(
-                    text = "نسخه ۳.۰.۳",
+                    text = "نسخه ۳.۰.۴",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFFD97706),
@@ -6261,7 +6488,7 @@ fun AboutAppTab(viewModel: ReportViewModel) {
                         type = "message/rfc822"
                         putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf("MOSTAFA5804@GMAIL.COM"))
                         putExtra(android.content.Intent.EXTRA_SUBJECT, "بازخورد و ارتباط با سازنده سامانه گزارش یار")
-                        putExtra(android.content.Intent.EXTRA_TEXT, "با سلام و احترام،\nبازخورد من درباره برنامه سامانه گزارش یار کارگاه نسخه ۳.۰.۳:\n\n")
+                        putExtra(android.content.Intent.EXTRA_TEXT, "با سلام و احترام،\nبازخورد من درباره برنامه سامانه گزارش یار کارگاه نسخه ۳.۰.۴:\n\n")
                     }
                     context.startActivity(android.content.Intent.createChooser(intent, "ارسال ایمیل به سازنده"))
                 } catch (e: Exception) {
@@ -6297,7 +6524,7 @@ fun AboutAppTab(viewModel: ReportViewModel) {
                     val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                         type = "message/rfc822"
                         putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf("MOSTAFA5804@GMAIL.COM"))
-                        putExtra(android.content.Intent.EXTRA_SUBJECT, "پشتیبان داده‌های سامانه گزارش یار - نسخه ۳.۰.۳")
+                        putExtra(android.content.Intent.EXTRA_SUBJECT, "پشتیبان داده‌های سامانه گزارش یار - نسخه ۳.۰.۴")
                         putExtra(android.content.Intent.EXTRA_TEXT, "با سلام،\nپشتیبان داده‌های کارگاه ساختمانی من پیوست شده است:")
                         putExtra(android.content.Intent.EXTRA_STREAM, fileUri)
                         addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)

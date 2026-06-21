@@ -194,7 +194,7 @@ class ReportViewModel(
 
     // Helper: Dynamic Shamsi Date Calculator
     fun getTodayPersianDate(): String {
-        val calendar = Calendar.getInstance()
+        val calendar = java.util.GregorianCalendar(java.util.Locale.US)
         val gYear = calendar.get(Calendar.YEAR)
         val gMonth = calendar.get(Calendar.MONTH) + 1
         val gDay = calendar.get(Calendar.DAY_OF_MONTH)
