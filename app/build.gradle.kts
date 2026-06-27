@@ -14,8 +14,8 @@ android {
     applicationId = "com.aistudio.civilsync.uqwzye"
     minSdk = 23
     targetSdk = 36
-    versionCode = 6
-    versionName = "3.0.4"
+    versionCode = 7
+    versionName = "3.0.6"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

@@ -70,6 +70,8 @@ class ReportViewModel(
     private val _isExporting = MutableStateFlow(false)
     val isExporting: StateFlow<Boolean> = _isExporting.asStateFlow()
 
+    val backupRestoredEvent = MutableStateFlow(0)
+
     init {
         // Auto-save pipeline with debounce to prevent database write spam during typing
         _currentReport
@@ -253,6 +255,11 @@ class ReportViewModel(
 
     private fun toPersianDigits(num: Int): String {
         val persianDigits = charArrayOf('۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹')
+        if (num < 0) {
+            val positivePart = (-num).toString()
+            val converted = positivePart.map { c -> if (c.isDigit()) persianDigits[c - '0'] else c }.joinToString("")
+            return "-$converted"
+        }
         val numStr = if (num < 10) "0$num" else num.toString()
         val builder = StringBuilder()
         for (i in 0 until numStr.length) {
@@ -383,6 +390,10 @@ class ReportViewModel(
 
     // Export all reports as a pretty JSON string
     fun exportBackup(): String {
+        val rootObj = org.json.JSONObject()
+        rootObj.put("backup_version", 2)
+        
+        // Reports List
         val rootArray = org.json.JSONArray()
         for (report in allReports.value) {
             val reportObj = org.json.JSONObject().apply {
@@ -421,6 +432,7 @@ class ReportViewModel(
                         put("inactiveCount", mech.inactiveCount)
                         put("workingHours", mech.workingHours)
                         put("comments", mech.comments)
+                        put("ownershipType", mech.ownershipType)
                     })
                 }
                 put("machinery", mechArray)
@@ -460,17 +472,96 @@ class ReportViewModel(
             }
             rootArray.put(reportObj)
         }
-        return rootArray.toString(2)
+        rootObj.put("reports", rootArray)
+
+        // Settings / SharedPreferences
+        val settingsObj = org.json.JSONObject().apply {
+            val stringKeys = listOf(
+                "default_project", "default_section", "default_prepared_by", "default_weather",
+                "custom_unit_title", "default_start_km", "default_end_km", "default_report_type",
+                "user_signature", "app_theme", "dashboard_recent_activities", "dashboard_tomorrow_forecast"
+            )
+            for (key in stringKeys) {
+                put(key, sharedPreferences.getString(key, ""))
+            }
+            put("daily_reminder_enabled", sharedPreferences.getBoolean("daily_reminder_enabled", true))
+
+            val stringSetKeys = listOf(
+                "manpower_roles_history", "manpower_names_history", "machinery_history", "site_materials_history",
+                "warehouse_legal_history", "warehouse_survey_history", "warehouse_technical_history",
+                "warehouse_exit_history", "warehouse_import_history"
+            )
+            for (key in stringSetKeys) {
+                val set = sharedPreferences.getStringSet(key, null)
+                if (set != null) {
+                    put(key, org.json.JSONArray(set.toList()))
+                }
+            }
+        }
+        rootObj.put("settings", settingsObj)
+
+        return rootObj.toString(2)
     }
 
     // Import reports from a JSON string and merge them into the repository
     fun importBackup(jsonString: String, onSuccess: (Int) -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
-                val array = org.json.JSONArray(jsonString)
+                val trimmed = jsonString.trim()
+                val reportsArray: org.json.JSONArray
+                val settingsObj: org.json.JSONObject?
+
+                if (trimmed.startsWith("[")) {
+                    // Old format: direct array of reports
+                    reportsArray = org.json.JSONArray(trimmed)
+                    settingsObj = null
+                } else {
+                    // New format: JSONObject wrapper
+                    val root = org.json.JSONObject(trimmed)
+                    reportsArray = root.getJSONArray("reports")
+                    settingsObj = root.optJSONObject("settings")
+                }
+
+                // Restore SharedPreferences Settings
+                if (settingsObj != null) {
+                    val editor = sharedPreferences.edit()
+                    val stringKeys = listOf(
+                        "default_project", "default_section", "default_prepared_by", "default_weather",
+                        "custom_unit_title", "default_start_km", "default_end_km", "default_report_type",
+                        "user_signature", "app_theme", "dashboard_recent_activities", "dashboard_tomorrow_forecast"
+                    )
+                    for (key in stringKeys) {
+                        if (settingsObj.has(key)) {
+                            val v = settingsObj.getString(key)
+                            if (v.isNotEmpty()) editor.putString(key, v)
+                        }
+                    }
+                    if (settingsObj.has("daily_reminder_enabled")) {
+                        editor.putBoolean("daily_reminder_enabled", settingsObj.getBoolean("daily_reminder_enabled"))
+                    }
+
+                    val stringSetKeys = listOf(
+                        "manpower_roles_history", "manpower_names_history", "machinery_history", "site_materials_history",
+                        "warehouse_legal_history", "warehouse_survey_history", "warehouse_technical_history",
+                        "warehouse_exit_history", "warehouse_import_history"
+                    )
+                    for (key in stringSetKeys) {
+                        if (settingsObj.has(key)) {
+                            val arr = settingsObj.getJSONArray(key)
+                            val set = mutableSetOf<String>()
+                            for (k in 0 until arr.length()) {
+                                set.add(arr.getString(k))
+                            }
+                            if (set.isNotEmpty()) editor.putStringSet(key, set)
+                        }
+                    }
+                    editor.apply()
+                    backupRestoredEvent.value += 1
+                }
+
                 var importedCount = 0
-                for (i in 0 until array.length()) {
-                    val obj = array.getJSONObject(i)
+                for (i in 0 until reportsArray.length()) {
+                    val obj = reportsArray.getJSONObject(i)
                     
                     // Parse tasks
                     val tasksList = mutableListOf<TaskEntry>()
@@ -500,7 +591,8 @@ class ReportViewModel(
                                 activeCount = mechObj.optInt("activeCount", 0),
                                 inactiveCount = mechObj.optInt("inactiveCount", 0),
                                 workingHours = mechObj.optString("workingHours", ""),
-                                comments = mechObj.optString("comments", "")
+                                comments = mechObj.optString("comments", ""),
+                                ownershipType = mechObj.optString("ownershipType", "COMPANY")
                             ))
                         }
                     }

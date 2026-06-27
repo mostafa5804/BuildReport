@@ -54,7 +54,7 @@
 
 ۱. مخزن پروژه را کلون کنید:
    ```bash
-   git clone https://github.com/yourusername/BuildReportYar.git
+   git clone https://github.com/yourusername/BuildReport.git
    ```
 ۲. پوشه ریشه پروژه را در نرم‌افزار **Android Studio (نسخه Hedgehog یا بالاتر)** باز کنید.
 ۳. منتظر بمانید تا عملیات هماهنگ‌سازی (Gradle Sync) با موفقیت به پایان برسد.

@@ -22,7 +22,8 @@ data class MachineryEntry(
     val activeCount: Int = 0,
     val inactiveCount: Int = 0,
     val workingHours: String = "",
-    val comments: String = ""
+    val comments: String = "",
+    val ownershipType: String = "COMPANY" // "COMPANY" (شرکتی) or "RENTAL" (استیجاری)
 )
 
 @JsonClass(generateAdapter = true)

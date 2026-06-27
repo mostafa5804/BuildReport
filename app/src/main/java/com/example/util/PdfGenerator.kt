@@ -23,23 +23,55 @@ object PdfGenerator {
             else -> "گزارش روزانه فعالیت‌های اجرایی کارگاه"
         }
 
+        val machineryTableHeader = """
+            <thead>
+                <tr>
+                    <th style="width: 5%;">ردیف</th>
+                    <th style="width: 25%;">نام و مدل تجهیزات</th>
+                    <th style="width: 12%;">وضعیت</th>
+                    <th style="width: 10%;">فعال</th>
+                    <th style="width: 10%;">غیر فعال</th>
+                    <th style="width: 15%;">ساعت کارکرد</th>
+                    <th style="width: 23%;">توضیحات و وضعیت</th>
+                </tr>
+            </thead>
+        """.trimIndent()
+
         // Shared machinery rows helper
         val machineryRows = if (report.machinery.isEmpty()) {
-            "<tr><td colspan='6' class='text-muted'>هیچ ماشین‌آلاتی برای این روز ثبت نشده است</td></tr>"
+            "<tr><td colspan='7' class='text-muted'>هیچ ماشین‌آلاتی برای این روز ثبت نشده است</td></tr>"
         } else {
             report.machinery.mapIndexed { index, machinery ->
+                val statusLabel = when (machinery.ownershipType) {
+                    "COMPANY" -> "شرکتی"
+                    "RENTAL" -> "استیجاری"
+                    else -> "پیمانکار"
+                }
                 """
                 <tr>
                     <td class="cell-index">${index + 1}</td>
                     <td class="cell-main">${machinery.type}</td>
+                    <td>$statusLabel</td>
                     <td>${machinery.activeCount}</td>
                     <td>${machinery.inactiveCount}</td>
                     <td>${machinery.workingHours.ifEmpty { "---" }}</td>
-                    <td class="cell-desc">${machinery.comments.ifEmpty { "بدون اشکال / فعال" }}</td>
+                    <td class="cell-desc">${machinery.comments.ifEmpty { "---" }}</td>
                 </tr>
                 """.trimIndent()
             }.joinToString("")
         }
+
+        val manpowerTableHeader = """
+            <thead>
+                <tr>
+                    <th style="width: 5%;">ردیف</th>
+                    <th style="width: 25%;">نام پرسنل</th>
+                    <th style="width: 20%;">سمت</th>
+                    <th style="width: 15%;">تعداد حاضر</th>
+                    <th style="width: 35%;">توضیحات (شرکتی - پیمانکار)</th>
+                </tr>
+            </thead>
+        """.trimIndent()
 
         // Shared manpower rows helper
         val manpowerRows = if (report.manpower.isEmpty()) {
@@ -47,25 +79,26 @@ object PdfGenerator {
         } else {
             report.manpower.mapIndexed { index, manpower ->
                 val empTypeLabel = if (manpower.employmentType == "SUBCONTRACTOR") {
-                    if (manpower.subcontractorName.isNotEmpty()) "پیمانکار: ${manpower.subcontractorName}" else "پیمانکار دست دوم"
+                    if (manpower.subcontractorName.isNotEmpty()) "پیمانکار: ${manpower.subcontractorName}" else "پیمانکار"
                 } else {
-                    "نیروی شرکت"
+                    "شرکتی (امانی)"
                 }
                 val isLeave = manpower.isOnLeave
-                val leaveText = if (isLeave) " <span style='color: #dc2626; font-weight: bold;'>(در مرخصی ✈️)</span>" else ""
-                val responsiblePerson = if (manpower.name.isNotEmpty()) {
-                    "${manpower.name}$leaveText ($empTypeLabel)"
+                val statusText = if (isLeave) "در مرخصی ✈️" else "حاضر - $empTypeLabel"
+                val commentText = if (manpower.comments.isNotEmpty()) {
+                    "$statusText (${manpower.comments})"
                 } else {
-                    "اکیپ فعال$leaveText ($empTypeLabel)"
+                    statusText
                 }
-                val countText = if (isLeave) "<span style='color: #dc2626;'>۰ نفر (مرخصی)</span>" else "${manpower.count} نفر"
+                val rowStyle = if (isLeave) "style='color: #ef4444; background-color: #fef2f2; font-weight: bold;'" else ""
+                val countText = if (isLeave) "۰" else "${manpower.count}"
                 """
-                <tr>
+                <tr $rowStyle>
                     <td class="cell-index">${index + 1}</td>
-                    <td class="cell-main" style="${if (isLeave) "color: #9ca3af; text-decoration: line-through;" else ""}">${manpower.role}</td>
-                    <td style="${if (isLeave) "color: #4b5563;" else ""}">$responsiblePerson</td>
+                    <td class="cell-main" style="${if (isLeave) "color: #ef4444;" else ""}">${manpower.name.ifEmpty { "اکیپ فعال" }}</td>
+                    <td>${manpower.role.ifEmpty { "---" }}</td>
                     <td>$countText</td>
-                    <td class="cell-desc">${manpower.comments.ifEmpty { "---" }}</td>
+                    <td class="cell-desc">$commentText</td>
                 </tr>
                 """.trimIndent()
             }.joinToString("")
@@ -89,8 +122,8 @@ object PdfGenerator {
                             <td class="cell-main">${entry.type}</td>
                             <td>${entry.quantity}</td>
                             <td>${entry.unit}</td>
-                            <td>${entry.loadingLocation.ifEmpty { "نامشخص/مبداء" }}</td>
-                            <td>${entry.unloadingLocation.ifEmpty { "انبار اصلی" }}</td>
+                            <td>${entry.loadingLocation.ifEmpty { "---" }}</td>
+                            <td>${entry.unloadingLocation.ifEmpty { "---" }}</td>
                             <td class="cell-desc">${entry.comments.ifEmpty { "---" }}</td>
                         </tr>
                         """.trimIndent()
@@ -107,7 +140,7 @@ object PdfGenerator {
                             <td class="cell-main">${exit.type}</td>
                             <td>${exit.quantity}</td>
                             <td>${exit.unit}</td>
-                            <td>${exit.receiver.ifEmpty { "سرپرست/اکیپ اجرایی" }}</td>
+                            <td>${exit.receiver.ifEmpty { "---" }}</td>
                             <td class="cell-desc">${exit.comments.ifEmpty { "---" }}</td>
                         </tr>
                         """.trimIndent()
@@ -155,16 +188,7 @@ object PdfGenerator {
                     <!-- 3. ماشین‌آلات انبار -->
                     <div class="section-title">۳. وضعیت ماشین‌آلات و تجهیزات لجستیکی انبار</div>
                     <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 5%;">ردیف</th>
-                                <th style="width: 35%;">نام و مدل تجهیزات</th>
-                                <th style="width: 12%;">فعال</th>
-                                <th style="width: 12%;">غیر فعال</th>
-                                <th style="width: 15%;">ساعت کارکرد</th>
-                                <th style="width: 21%;">توضیحات و وضعیت</th>
-                            </tr>
-                        </thead>
+                        $machineryTableHeader
                         <tbody>
                             $machineryRows
                         </tbody>
@@ -173,15 +197,7 @@ object PdfGenerator {
                     <!-- 4. نیروی انسانی انبار -->
                     <div class="section-title">۴. آمار پرسنل و نیروهای شاغل در انبارداری</div>
                     <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 5%;">ردیف</th>
-                                <th style="width: 35%;">سمت / تخصص</th>
-                                <th style="width: 25%;">نام سرپرست/مسئول</th>
-                                <th style="width: 15%;">تعداد حاضر</th>
-                                <th style="width: 20%;">توضیحات کارکرد</th>
-                            </tr>
-                        </thead>
+                        $manpowerTableHeader
                         <tbody>
                             $manpowerRows
                         </tbody>
@@ -220,7 +236,7 @@ object PdfGenerator {
                         <tr>
                             <td class="cell-index">${index + 1}</td>
                             <td class="cell-main">${item.type}</td>
-                            <td><strong>${item.receiver.ifEmpty { "سازمان مربوطه" }}</strong></td>
+                            <td><strong>${item.receiver.ifEmpty { "---" }}</strong></td>
                             <td class="cell-desc">${item.comments.ifEmpty { "---" }}</td>
                         </tr>
                         """.trimIndent()
@@ -264,16 +280,7 @@ object PdfGenerator {
                     <!-- 3. ماشین‌آلات -->
                     <div class="section-title">۳. تجهیزات نقلیه و مهندسی واحد حقوقی و نقشه برداری معارضین</div>
                     <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 5%;">ردیف</th>
-                                <th style="width: 35%;">نام و مدل تجهیزات</th>
-                                <th style="width: 12%;">فعال</th>
-                                <th style="width: 12%;">غیر فعال</th>
-                                <th style="width: 15%;">ساعت کارکرد</th>
-                                <th style="width: 21%;">توضیحات</th>
-                            </tr>
-                        </thead>
+                        $machineryTableHeader
                         <tbody>
                             $machineryRows
                         </tbody>
@@ -282,15 +289,7 @@ object PdfGenerator {
                     <!-- 4. نیروی انسانی -->
                     <div class="section-title">۴. مشاورین، کارشناسان رسمی و پرسنل پیگیری حقوقی اراضی</div>
                     <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 5%;">ردیف</th>
-                                <th style="width: 35%;">سمت / تخصص</th>
-                                <th style="width: 25%;">نام پزشک/کارشناس/مسئول</th>
-                                <th style="width: 15%;">تعداد حاضر</th>
-                                <th style="width: 20%;">شرح فعالیت موضوعی امروز</th>
-                            </tr>
-                        </thead>
+                        $manpowerTableHeader
                         <tbody>
                             $manpowerRows
                         </tbody>
@@ -316,26 +315,7 @@ object PdfGenerator {
                             <td class="cell-highlight">${task.quantity}</td>
                             <td>${task.unit}</td>
                             <td>${task.accumulativeQuantity.ifEmpty { "---" }}</td>
-                            <td class="cell-desc">${task.comments.ifEmpty { "خروجی نقشه انجام شد" }}</td>
-                        </tr>
-                        """.trimIndent()
-                    }.joinToString("")
-                }
-
-                // Surveying Tomorrow forecast (saved in Materials)
-                val forecastRows = if (report.materials.isEmpty()) {
-                    "<tr><td colspan='7' class='text-muted'>هیچ برنامه‌ای برای پیش‌بینی عملیات نقشه‌برداری روز بعد ثبت نگردیده است</td></tr>"
-                } else {
-                    report.materials.mapIndexed { index, item ->
-                        """
-                        <tr>
-                            <td class="cell-index">${index + 1}</td>
-                            <td class="cell-main">${item.type}</td>
-                            <td>${if (item.loadingLocation.isEmpty() && item.unloadingLocation.isEmpty()) "سرتا‌سر کارگاه" else item.loadingLocation + " الی " + item.unloadingLocation}</td>
-                            <td class="cell-highlight">${item.quantity}</td>
-                            <td>${item.unit}</td>
-                            <td>${item.count}</td>
-                            <td class="cell-desc">${item.comments.ifEmpty { "---" }}</td>
+                            <td class="cell-desc">${task.comments.ifEmpty { "---" }}</td>
                         </tr>
                         """.trimIndent()
                     }.joinToString("")
@@ -343,17 +323,17 @@ object PdfGenerator {
 
                 bodyContentHtml = """
                     <!-- 1. کارهای انجام شده -->
-                    <div class="section-title">۱. خلاصه آمار عملیات‌های نقشه‌برداری، شیت‌ها و پیاده‌سازی گره‌ها</div>
+                    <div class="section-title">۱. خلاصه آمار عملیات‌های نقشه‌برداری و شیت‌ها</div>
                     <table class="report-table">
                         <thead>
                             <tr>
                                 <th style="width: 5%;">ردیف</th>
-                                <th style="width: 35%;">شرح دقیق عملیات نقشه‌برداری / برداشت / پیاده‌سازی</th>
-                                <th style="width: 15%;">موقعیت / کیلومتر ابتدا-انتها</th>
+                                <th style="width: 35%;">شرح عملیات نقشه‌برداری</th>
+                                <th style="width: 20%;">ایستگاه / بنچمارک</th>
                                 <th style="width: 10%;">کارکرد امروز</th>
                                 <th style="width: 8%;">واحد</th>
                                 <th style="width: 12%;">حجم کل تجمیعی</th>
-                                <th style="width: 15%;">ملاحظات و وضعیت تحویل فنی</th>
+                                <th style="width: 15%;">ملاحظات و وضعیت تحویل</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -361,55 +341,19 @@ object PdfGenerator {
                         </tbody>
                     </table>
 
-                    <!-- 2. پیش بینی روز آینده -->
-                    <div class="section-title">۲. پیش‌بینی و برنامه‌ریزی عملیات نقشه‌برداری برای روز آینده</div>
+                    <!-- 2. ماشین‌آلات -->
+                    <div class="section-title">۲. وضعیت دوربین‌ها، پهپادها، تجهیزات GPS و ماشین ابزار نقشه‌برداری</div>
                     <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 5%;">ردیف</th>
-                                <th style="width: 35%;">شرح برنامه‌ریزی برداشت و نقاط هدف روز بعد</th>
-                                <th style="width: 15%;">محدوده فرضی / کیلومتر ابتدا-انتها</th>
-                                <th style="width: 10%;">کارکرد برآورد</th>
-                                <th style="width: 8%;">واحد</th>
-                                <th style="width: 12%;">حجم کل تجمیعی برآورد</th>
-                                <th style="width: 15%;">ملاحظات پیش‌نیاز فنی</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            $forecastRows
-                        </tbody>
-                    </table>
-
-                    <!-- 3. ماشین‌آلات -->
-                    <div class="section-title">۳. وضعیت دوربین‌ها، پهپادها، تجهیزات GPS و ماشین ابزار نقشه‌برداری</div>
-                    <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 5%;">ردیف</th>
-                                <th style="width: 35%;">نام و مدل تجهیزات سنجش و دوربین‌ها</th>
-                                <th style="width: 12%;">فعال</th>
-                                <th style="width: 12%;">نیمه‌فعال یا کالیبره زمان‌دار</th>
-                                <th style="width: 15%;">ساعت کارکرد سنج</th>
-                                <th style="width: 21%;">توضیحات و تراز سنج</th>
-                            </tr>
-                        </thead>
+                        $machineryTableHeader
                         <tbody>
                             $machineryRows
                         </tbody>
                     </table>
 
-                    <!-- 4. نیروی انسانی -->
-                    <div class="section-title">۴. آمار مهندسین نقشه‌بردار، کمک‌ نقشه‌برداران و میرداران حاضر در کارگاه</div>
+                    <!-- 3. نیروی انسانی -->
+                    <div class="section-title">۳. آمار مهندسین نقشه‌بردار، کمک‌ نقشه‌برداران و میرداران حاضر در کارگاه</div>
                     <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 5%;">ردیف</th>
-                                <th style="width: 35%;">سمت / تخصص اکیپ نقشه‌برداری</th>
-                                <th style="width: 25%;">نام سرپرست اکیپ / شیت‌نویس</th>
-                                <th style="width: 15%;">تعداد حاضر</th>
-                                <th style="width: 20%;">توضیحات کارکرد نقاط موضوعی</th>
-                            </tr>
-                        </thead>
+                        $manpowerTableHeader
                         <tbody>
                             $manpowerRows
                         </tbody>
@@ -483,16 +427,7 @@ object PdfGenerator {
                     <!-- 3. ماشین‌آلات ایمنی -->
                     <div class="section-title">۳. وضعیت تجهیزات ترابری، اطفای حریق و کمک‌های اولیه واحد ایمنی</div>
                     <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 5%;">ردیف</th>
-                                <th style="width: 35%;">نام و مدل تجهیزات</th>
-                                <th style="width: 12%;">فعال</th>
-                                <th style="width: 12%;">غیر فعال</th>
-                                <th style="width: 15%;">ساعت کارکرد</th>
-                                <th style="width: 21%;">توضیحات و وضعیت</th>
-                            </tr>
-                        </thead>
+                        $machineryTableHeader
                         <tbody>
                             $machineryRows
                         </tbody>
@@ -501,15 +436,7 @@ object PdfGenerator {
                     <!-- 4. نیروی انسانی ایمنی -->
                     <div class="section-title">۴. آمار افسران ایمنی، پزشک‌یار و پرسنل بخش HSE</div>
                     <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 5%;">ردیف</th>
-                                <th style="width: 35%;">سمت / تخصص</th>
-                                <th style="width: 25%;">نام سرپرست/مسئول تکنسین</th>
-                                <th style="width: 15%;">تعداد حاضر</th>
-                                <th style="width: 20%;">توضیحات کارکرد پرسنل</th>
-                            </tr>
-                        </thead>
+                        $manpowerTableHeader
                         <tbody>
                             $manpowerRows
                         </tbody>
@@ -583,16 +510,7 @@ object PdfGenerator {
                     <!-- 3. ماشین‌آلات -->
                     <div class="section-title">۳. وضعیت ماشین‌آلات و تجهیزات واحد $customUnitTitle</div>
                     <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 5%;">ردیف</th>
-                                <th style="width: 35%;">نام و مدل تجهیزات</th>
-                                <th style="width: 12%;">فعال</th>
-                                <th style="width: 12%;">غیر فعال</th>
-                                <th style="width: 15%;">ساعت کارکرد</th>
-                                <th style="width: 21%;">توضیحات و وضعیت</th>
-                            </tr>
-                        </thead>
+                        $machineryTableHeader
                         <tbody>
                             $machineryRows
                         </tbody>
@@ -601,15 +519,7 @@ object PdfGenerator {
                     <!-- 4. نیروی انسانی -->
                     <div class="section-title">۴. آمار پرسنل و نیروهای فعال واحد $customUnitTitle</div>
                     <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 5%;">ردیف</th>
-                                <th style="width: 35%;">سمت / تخصص</th>
-                                <th style="width: 25%;">نام سرپرست/مسئول مربوطه</th>
-                                <th style="width: 15%;">تعداد حاضر</th>
-                                <th style="width: 20%;">توضیحات کارکرد پرسنل</th>
-                            </tr>
-                        </thead>
+                        $manpowerTableHeader
                         <tbody>
                             $manpowerRows
                         </tbody>
@@ -683,16 +593,7 @@ object PdfGenerator {
                     <!-- 3. ماشین‌آلات -->
                     <div class="section-title">۳. وضعیت تجهیزات دفتری، آزمایشی و ترابری واحد فنی</div>
                     <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 5%;">ردیف</th>
-                                <th style="width: 35%;">نام و مدل تجهیزات</th>
-                                <th style="width: 12%;">فعال</th>
-                                <th style="width: 12%;">غیر فعال</th>
-                                <th style="width: 15%;">ساعت کارکرد</th>
-                                <th style="width: 21%;">توضیحات و وضعیت</th>
-                            </tr>
-                        </thead>
+                        $machineryTableHeader
                         <tbody>
                             $machineryRows
                         </tbody>
@@ -701,15 +602,7 @@ object PdfGenerator {
                     <!-- 4. نیروی انسانی -->
                     <div class="section-title">۴. آمار مهندسان، کارشناسان و پرسنل بخش دفتر فنی و کنترل پروژه</div>
                     <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 5%;">ردیف</th>
-                                <th style="width: 35%;">سمت / تخصص</th>
-                                <th style="width: 25%;">نام سرپرست/مسئول تکنسین</th>
-                                <th style="width: 15%;">تعداد حاضر</th>
-                                <th style="width: 20%;">توضیحات کارکرد پرسنل</th>
-                            </tr>
-                        </thead>
+                        $manpowerTableHeader
                         <tbody>
                             $manpowerRows
                         </tbody>
@@ -762,16 +655,7 @@ object PdfGenerator {
                     <!-- 2. ماشین‌آلات -->
                     <div class="section-title">۲. وضعیت ماشین‌آلات، تجهیزات سنگین و سبک مستقر در کارگاه</div>
                     <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 5%;">ردیف</th>
-                                <th style="width: 35%;">نام و مدل تجهیزات</th>
-                                <th style="width: 12%;">تعداد فعال</th>
-                                <th style="width: 12%;">تعداد خراب/متوقف</th>
-                                <th style="width: 15%;">ساعت کارکرد</th>
-                                <th style="width: 21%;">توضیحات و وضعیت</th>
-                            </tr>
-                        </thead>
+                        $machineryTableHeader
                         <tbody>
                             $machineryRows
                         </tbody>
@@ -780,15 +664,7 @@ object PdfGenerator {
                     <!-- 3. نیروی انسانی -->
                     <div class="section-title">۳. آمار نیروی انسانی فنی، اجرایی و کارگری شاغل در کارگاه</div>
                     <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 5%;">ردیف</th>
-                                <th style="width: 35%;">سمت / تخصص نیروی کار</th>
-                                <th style="width: 25%;">نام سرپرست/مسئول اکیپ</th>
-                                <th style="width: 15%;">تعداد حاضر</th>
-                                <th style="width: 20%;">شرح کارکرد/وضعیت اکیپ</th>
-                            </tr>
-                        </thead>
+                        $manpowerTableHeader
                         <tbody>
                             $manpowerRows
                         </tbody>
@@ -1121,12 +997,12 @@ object PdfGenerator {
                 <div class="memo-container">
                     <div class="memo-box">
                         <div class="memo-title">⚠️ موانع، مشکلات، نواقص و حوادث کارگاهی:</div>
-                        <div class="memo-text">${report.obstacles.ifEmpty { "موردی گزارش نشده است و عملیات طبق برنامه پیش رفته است." }}</div>
+                        <div class="memo-text">${report.obstacles.ifEmpty { "---" }}</div>
                     </div>
     
                     <div class="memo-box" style="border-right-color: #10b981; background-color: #ecfdf5;">
                         <div class="memo-title" style="color: #047857;">📅 پیش‌بینی فعالیت‌های برنامه‌ریزی شده برای روز آینده:</div>
-                        <div class="memo-text" style="color: #064e3b;">${report.tomorrowPlan.ifEmpty { "موردی ثبت نشده است." }}</div>
+                        <div class="memo-text" style="color: #064e3b;">${report.tomorrowPlan.ifEmpty { "---" }}</div>
                     </div>
                 </div>
 
