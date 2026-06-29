@@ -136,7 +136,7 @@ class DailyReminderReceiver : BroadcastReceiver() {
     }
 
     private fun getTodayPersianDate(): String {
-        val calendar = Calendar.getInstance()
+        val calendar = Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Tehran"))
         val gy = calendar.get(Calendar.YEAR)
         val gm = calendar.get(Calendar.MONTH) + 1
         val gd = calendar.get(Calendar.DAY_OF_MONTH)

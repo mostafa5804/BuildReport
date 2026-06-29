@@ -19,14 +19,171 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
 import java.io.File
 import java.util.Calendar
+
+import com.example.weather.WeatherRepository
+import com.example.weather.CurrentWeather
+import com.example.weather.DailyWeather
+import com.example.weather.ForecastResponse
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class ReportViewModel(
     private val repository: ReportRepository,
     val sharedPreferences: SharedPreferences
 ) : ViewModel() {
+
+    private val photoAdapter = Moshi.Builder().add(KotlinJsonAdapterFactory()).build().adapter(DailyPhoto::class.java)
+
+    private val _temporaryPhotos = MutableStateFlow<List<DailyPhoto>>(emptyList())
+    val temporaryPhotos: StateFlow<List<DailyPhoto>> = _temporaryPhotos.asStateFlow()
+
+    fun addTemporaryPhoto(context: android.content.Context, uri: android.net.Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val cachedPath = com.example.util.PhotoCacheManager.savePhotoToCache(context, uri)
+            if (cachedPath != null) {
+                // Ensure we create a valid file URI scheme so Coil can load it smoothly
+                val localUri = "file://$cachedPath"
+                val current = _temporaryPhotos.value.toMutableList()
+                current.add(DailyPhoto(uri = localUri))
+                _temporaryPhotos.value = current
+                saveCurrentReportImmediately()
+            }
+        }
+    }
+
+    fun removeTemporaryPhoto(photo: DailyPhoto) {
+        val current = _temporaryPhotos.value.toMutableList()
+        current.remove(photo)
+        _temporaryPhotos.value = current
+        saveCurrentReportImmediately()
+    }
+
+    fun updateTemporaryPhotoDescription(photo: DailyPhoto, description: String) {
+        val current = _temporaryPhotos.value.toMutableList()
+        val index = current.indexOf(photo)
+        if (index != -1) {
+            current[index] = photo.copy(description = description)
+            _temporaryPhotos.value = current
+            
+            autoSaveJob?.cancel()
+            autoSaveJob = viewModelScope.launch {
+                kotlinx.coroutines.delay(500)
+                saveCurrentReportImmediately()
+            }
+        }
+    }
+
+    fun clearTemporaryPhotos() {
+        _temporaryPhotos.value = emptyList()
+    }
+
+    fun loadPhotosFromReport(report: DailyReport) {
+        val loaded = report.photos.mapNotNull { json ->
+            try {
+                photoAdapter.fromJson(json)
+            } catch (e: Exception) {
+                // Fallback for old data if any exists
+                DailyPhoto(uri = json)
+            }
+        }.filter {
+            // Keep only photos that still exist in cache
+            val path = it.uri.removePrefix("file://")
+            java.io.File(path).exists()
+        }
+        _temporaryPhotos.value = loaded
+    }
+    
+    fun getSerializedPhotos(): List<String> {
+        return _temporaryPhotos.value.map { photoAdapter.toJson(it) }
+    }
+
+    // Weather States
+    private val _currentWeather = MutableStateFlow<CurrentWeather?>(null)
+    val currentWeather: StateFlow<CurrentWeather?> = _currentWeather.asStateFlow()
+
+    private val _dailyForecast = MutableStateFlow<DailyWeather?>(null)
+    val dailyForecast: StateFlow<DailyWeather?> = _dailyForecast.asStateFlow()
+
+    private val _weatherLastUpdate = MutableStateFlow("")
+    val weatherLastUpdate: StateFlow<String> = _weatherLastUpdate.asStateFlow()
+    
+    private val _weatherCityName = MutableStateFlow("")
+    val weatherCityName: StateFlow<String> = _weatherCityName.asStateFlow()
+    
+    private val _isWeatherLoading = MutableStateFlow(false)
+    val isWeatherLoading: StateFlow<Boolean> = _isWeatherLoading.asStateFlow()
+
+    private val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
+
+    fun fetchWeatherIfNeeded(forceRefresh: Boolean = false) {
+        val lat = sharedPreferences.getFloat("weather_latitude", 0f).toDouble()
+        val lon = sharedPreferences.getFloat("weather_longitude", 0f).toDouble()
+        val cityName = sharedPreferences.getString("weather_city_name", "") ?: ""
+        
+        if (lat == 0.0 || lon == 0.0 || cityName.isEmpty()) return
+        
+        _weatherCityName.value = cityName
+
+        viewModelScope.launch {
+            _isWeatherLoading.value = true
+            
+            // Try cache first if not forcing refresh
+            val cachedJson = sharedPreferences.getString("weather_cached_response", null)
+            if (cachedJson != null && !forceRefresh) {
+                try {
+                    val adapter = moshi.adapter(ForecastResponse::class.java)
+                    val cachedForecast = adapter.fromJson(cachedJson)
+                    if (cachedForecast != null) {
+                        _currentWeather.value = cachedForecast.current
+                        _dailyForecast.value = cachedForecast.daily
+                        _weatherLastUpdate.value = sharedPreferences.getString("weather_last_update_time", "") ?: ""
+                    }
+                } catch (e: Exception) {
+                    // Ignore cache errors
+                }
+            }
+
+            // Fetch from network
+            val forecast = WeatherRepository.getForecast(lat, lon)
+            if (forecast != null && forecast.current != null) {
+                _currentWeather.value = forecast.current
+                _dailyForecast.value = forecast.daily
+                
+                val calendar = Calendar.getInstance()
+                val updateTime = "${calendar.get(Calendar.YEAR)}/${calendar.get(Calendar.MONTH) + 1}/${calendar.get(Calendar.DAY_OF_MONTH)} ${calendar.get(Calendar.HOUR_OF_DAY)}:${String.format("%02d", calendar.get(Calendar.MINUTE))}"
+                _weatherLastUpdate.value = updateTime
+                
+                // Cache response
+                try {
+                    val adapter = moshi.adapter(ForecastResponse::class.java)
+                    val json = adapter.toJson(forecast)
+                    sharedPreferences.edit()
+                        .putString("weather_cached_response", json)
+                        .putString("weather_last_update_time", updateTime)
+                        .apply()
+                } catch (e: Exception) {
+                    // Ignore caching error
+                }
+            } else if (forceRefresh && cachedJson != null) {
+                // Network failed, fallback to cache
+                try {
+                    val adapter = moshi.adapter(ForecastResponse::class.java)
+                    val cachedForecast = adapter.fromJson(cachedJson)
+                    if (cachedForecast != null) {
+                        _currentWeather.value = cachedForecast.current
+                        _dailyForecast.value = cachedForecast.daily
+                        _weatherLastUpdate.value = sharedPreferences.getString("weather_last_update_time", "") ?: ""
+                    }
+                } catch (e: Exception) {}
+            }
+            
+            _isWeatherLoading.value = false
+        }
+    }
 
     // List of all historic reports
     val allReports: StateFlow<List<DailyReport>> = repository.allReports
@@ -102,7 +259,10 @@ class ReportViewModel(
 
     // Force an immediate manual save
     fun saveCurrentReportImmediately() {
-        val report = _currentReport.value ?: return
+        var report = _currentReport.value ?: return
+        report = report.copy(photos = getSerializedPhotos())
+        _currentReport.value = report // Keep UI synced
+        
         viewModelScope.launch {
             _isSaving.value = true
             val insertedId = repository.insertReport(report)
@@ -118,30 +278,48 @@ class ReportViewModel(
     }
 
     fun startNewReport(type: String) {
+        clearTemporaryPhotos()
         // SharedPreferences settings with sensible fallbacks
-        val defaultProject = sharedPreferences.getString("default_project", "")?.ifEmpty { null }
-            ?: allReports.value.firstOrNull()?.project
-            ?: "پروژه عمرانی مپصا"
+        val defaultProject = sharedPreferences.getString("default_project", "") ?: ""
             
-        val defaultPreparedBy = sharedPreferences.getString("default_prepared_by", "")?.ifEmpty { null }
-            ?: allReports.value.firstOrNull()?.preparedBy
-            ?: ""
+        val defaultPreparedBy = sharedPreferences.getString("default_prepared_by", "") ?: ""
             
-        val defaultSection = sharedPreferences.getString("default_section", "")?.ifEmpty { null }
-            ?: allReports.value.firstOrNull()?.section
-            ?: (if (type == "EXECUTION") "بخش فنی و مهندسی" else "انبار مرکزی")
+        val customUnitTitle = sharedPreferences.getString("custom_unit_title", "سایر واحدها") ?: "سایر واحدها"
+        val defaultSection = when (type) {
+            "WAREHOUSE" -> "انبار"
+            "LEGAL" -> "حقوقی"
+            "SURVEY" -> "نقشه‌برداری"
+            "TECHNICAL" -> "فنی"
+            "HSE" -> "ایمنی"
+            "CUSTOM" -> customUnitTitle
+            else -> "اجرا"
+        }
             
-        val defaultStartKm = sharedPreferences.getString("default_start_km", "")?.ifEmpty { null }
-            ?: allReports.value.firstOrNull()?.startKm
-            ?: ""
+        val defaultStartKm = sharedPreferences.getString("default_start_km", "") ?: ""
             
-        val defaultEndKm = sharedPreferences.getString("default_end_km", "")?.ifEmpty { null }
-            ?: allReports.value.firstOrNull()?.endKm
-            ?: ""
+        val defaultEndKm = sharedPreferences.getString("default_end_km", "") ?: ""
             
-        val defaultWeather = sharedPreferences.getString("default_weather", "")?.ifEmpty { null }
-            ?: allReports.value.firstOrNull()?.weather
-            ?: "آفتابی ☀️"
+        var defaultWeather = sharedPreferences.getString("default_weather", "") ?: ""
+
+        val weatherAutoUpdate = sharedPreferences.getBoolean("weather_auto_update", true)
+        val weatherEnabled = sharedPreferences.getBoolean("weather_enabled", true)
+        if (weatherEnabled && weatherAutoUpdate) {
+            val cachedJson = sharedPreferences.getString("weather_cached_response", null)
+            if (cachedJson != null) {
+                try {
+                    val adapter = moshi.adapter(ForecastResponse::class.java)
+                    val cachedForecast = adapter.fromJson(cachedJson)
+                    if (cachedForecast != null && cachedForecast.current != null) {
+                        val code = cachedForecast.daily?.weatherCode?.firstOrNull() ?: cachedForecast.current.weatherCode
+                        val weatherInfo = WeatherRepository.getWeatherCodeInfo(
+                            code,
+                            cachedForecast.current.isDay == 1
+                        )
+                        defaultWeather = "${weatherInfo.second} ${weatherInfo.first}"
+                    }
+                } catch (e: Exception) { }
+            }
+        }
 
         val todayPersian = getTodayPersianDate()
         
@@ -155,6 +333,7 @@ class ReportViewModel(
             weather = defaultWeather,
             reportType = type
         )
+        saveCurrentReportImmediately()
     }
 
     // Duplicate an existing report with today's date so user doesn't re-enter data
@@ -170,15 +349,20 @@ class ReportViewModel(
     }
 
     fun selectReport(reportId: Int) {
+        clearTemporaryPhotos()
         viewModelScope.launch {
             val report = repository.getReportById(reportId)
-            _currentReport.value = report
+            if (report != null) {
+                _currentReport.value = report
+                loadPhotosFromReport(report)
+            }
         }
     }
 
     fun deleteReport(report: DailyReport) {
         viewModelScope.launch {
             if (_currentReport.value?.id == report.id) {
+                clearTemporaryPhotos()
                 _currentReport.value = null
             }
             repository.deleteReport(report)
@@ -186,17 +370,27 @@ class ReportViewModel(
     }
 
     fun clearCurrentReport() {
+        clearTemporaryPhotos()
         _currentReport.value = null
     }
 
+    private var autoSaveJob: kotlinx.coroutines.Job? = null
+
     fun updateCurrentReport(updater: (DailyReport) -> DailyReport) {
         val current = _currentReport.value ?: return
-        _currentReport.value = updater(current)
+        val updated = updater(current)
+        _currentReport.value = updated
+        
+        autoSaveJob?.cancel()
+        autoSaveJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(500)
+            saveCurrentReportImmediately()
+        }
     }
 
     // Helper: Dynamic Shamsi Date Calculator
     fun getTodayPersianDate(): String {
-        val calendar = java.util.GregorianCalendar(java.util.Locale.US)
+        val calendar = java.util.GregorianCalendar(java.util.TimeZone.getTimeZone("Asia/Tehran"), java.util.Locale.US)
         val gYear = calendar.get(Calendar.YEAR)
         val gMonth = calendar.get(Calendar.MONTH) + 1
         val gDay = calendar.get(Calendar.DAY_OF_MONTH)
@@ -303,7 +497,8 @@ class ReportViewModel(
         
         val signatureBase64 = sharedPreferences.getString("user_signature", "") ?: ""
         val customUnitTitle = sharedPreferences.getString("custom_unit_title", "سایر واحدها") ?: "سایر واحدها"
-        val htmlContent = PdfGenerator.generateHtmlReport(report, signatureBase64, customUnitTitle)
+        val photos = _temporaryPhotos.value
+        val htmlContent = PdfGenerator.generateHtmlReport(context, report, signatureBase64, customUnitTitle, photos)
         
         // WebViews must be run on the UI Main thread
         viewModelScope.launch {
@@ -341,7 +536,8 @@ class ReportViewModel(
         
         val signatureBase64 = sharedPreferences.getString("user_signature", "") ?: ""
         val customUnitTitle = sharedPreferences.getString("custom_unit_title", "سایر واحدها") ?: "سایر واحدها"
-        val htmlContent = PdfGenerator.generateHtmlReport(report, signatureBase64, customUnitTitle)
+        val photos = _temporaryPhotos.value
+        val htmlContent = PdfGenerator.generateHtmlReport(context, report, signatureBase64, customUnitTitle, photos)
         
         viewModelScope.launch {
             val webView = WebView(context)
@@ -469,6 +665,17 @@ class ReportViewModel(
                     })
                 }
                 put("materials", matArray)
+
+                // Legal Permits array
+                val legalArray = org.json.JSONArray()
+                for (permit in report.legalPermits) {
+                    legalArray.put(org.json.JSONObject().apply {
+                        put("title", permit.title)
+                        put("organization", permit.organization)
+                        put("comments", permit.comments)
+                    })
+                }
+                put("legalPermits", legalArray)
             }
             rootArray.put(reportObj)
         }
@@ -636,6 +843,20 @@ class ReportViewModel(
                         }
                     }
 
+                    // Parse legal permits
+                    val legalList = mutableListOf<LegalPermitEntry>()
+                    val legalArray = obj.optJSONArray("legalPermits")
+                    if (legalArray != null) {
+                        for (j in 0 until legalArray.length()) {
+                            val legalObj = legalArray.getJSONObject(j)
+                            legalList.add(LegalPermitEntry(
+                                title = legalObj.optString("title", ""),
+                                organization = legalObj.optString("organization", ""),
+                                comments = legalObj.optString("comments", "")
+                            ))
+                        }
+                    }
+
                     val report = DailyReport(
                         project = obj.optString("project", ""),
                         section = obj.optString("section", ""),
@@ -649,6 +870,7 @@ class ReportViewModel(
                         machinery = mechList,
                         manpower = manList,
                         materials = matList,
+                        legalPermits = legalList,
                         obstacles = obj.optString("obstacles", ""),
                         tomorrowPlan = obj.optString("tomorrowPlan", ""),
                         reportType = obj.optString("reportType", "EXECUTION")

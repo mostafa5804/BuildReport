@@ -9,7 +9,13 @@ import java.io.File
 
 object PdfGenerator {
     // Generate HTML String from DailyReport
-    fun generateHtmlReport(report: DailyReport, signatureBase64: String = "", customUnitTitle: String = "سایر واحدها"): String {
+    fun generateHtmlReport(
+        context: Context,
+        report: DailyReport, 
+        signatureBase64: String = "", 
+        customUnitTitle: String = "سایر واحدها",
+        photos: List<com.example.data.model.DailyPhoto> = emptyList()
+    ): String {
         val rType = report.reportType
         
         // Base title based on reportType
@@ -108,22 +114,22 @@ object PdfGenerator {
 
         when (rType) {
             "WAREHOUSE" -> {
-                // Split materials into incoming (entries) and outgoing (exits)
-                val entriesList = report.materials.filter { !it.isExit }
-                val exitsList = report.materials.filter { it.isExit }
+                // مصالح وارده (stored in tasks)
+                val entriesList = report.tasks
+                // مصالح صادره (stored in materials)
+                val exitsList = report.materials
 
                 val entriesRowsHtml = if (entriesList.isEmpty()) {
-                    "<tr><td colspan='7' class='text-muted'>هیچ مصالح وارده‌ای ثبت نشده است</td></tr>"
+                    "<tr><td colspan='6' class='text-muted'>هیچ مصالح وارده‌ای ثبت نشده است</td></tr>"
                 } else {
                     entriesList.mapIndexed { index, entry ->
                         """
                         <tr>
                             <td class="cell-index">${index + 1}</td>
-                            <td class="cell-main">${entry.type}</td>
+                            <td class="cell-main">${entry.description}</td>
                             <td>${entry.quantity}</td>
                             <td>${entry.unit}</td>
-                            <td>${entry.loadingLocation.ifEmpty { "---" }}</td>
-                            <td>${entry.unloadingLocation.ifEmpty { "---" }}</td>
+                            <td>${entry.location.ifEmpty { "---" }}</td>
                             <td class="cell-desc">${entry.comments.ifEmpty { "---" }}</td>
                         </tr>
                         """.trimIndent()
@@ -140,7 +146,7 @@ object PdfGenerator {
                             <td class="cell-main">${exit.type}</td>
                             <td>${exit.quantity}</td>
                             <td>${exit.unit}</td>
-                            <td>${exit.receiver.ifEmpty { "---" }}</td>
+                            <td>${exit.unloadingLocation.ifEmpty { "---" }}</td>
                             <td class="cell-desc">${exit.comments.ifEmpty { "---" }}</td>
                         </tr>
                         """.trimIndent()
@@ -155,11 +161,10 @@ object PdfGenerator {
                             <tr>
                                 <th style="width: 5%;">ردیف</th>
                                 <th style="width: 25%;">نوع مصالح/کالا وارده</th>
-                                <th style="width: 12%;">مقدار ورودی</th>
-                                <th style="width: 10%;">واحد</th>
-                                <th style="width: 15%;">تامین کننده / مبدا بارگیری</th>
-                                <th style="width: 15%;">مبلغ دپو / محل تخلیه</th>
-                                <th style="width: 18%;">ملاحظات و وضعیت ظاهری</th>
+                                <th style="width: 15%;">مقدار ورودی</th>
+                                <th style="width: 15%;">واحد</th>
+                                <th style="width: 20%;">تامین کننده / مبدا بارگیری</th>
+                                <th style="width: 20%;">ملاحظات و وضعیت ظاهری</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -177,7 +182,7 @@ object PdfGenerator {
                                 <th style="width: 15%;">مقدار خروجی</th>
                                 <th style="width: 12%;">واحد</th>
                                 <th style="width: 20%;">تحویل گیرنده (اکیپ/شخص)</th>
-                                <th style="width: 23%;">مورد مصرف و توضیحات</th>
+                                <th style="width: 23%;">مورد مصرف و توضیحات (سند)</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -633,6 +638,22 @@ object PdfGenerator {
                     }.joinToString("")
                 }
 
+                val executionMaterialsRows = if (report.materials.isEmpty()) {
+                    "<tr><td colspan='5' class='text-muted'>هیچ آمار مصالح وارده‌ای برای این روز ثبت نشده است</td></tr>"
+                } else {
+                    report.materials.mapIndexed { index, material ->
+                        """
+                        <tr>
+                            <td class="cell-index">${index + 1}</td>
+                            <td class="cell-main">${material.type}</td>
+                            <td>${material.quantity}</td>
+                            <td>${material.unit}</td>
+                            <td class="cell-desc">${material.comments.ifEmpty { "---" }}</td>
+                        </tr>
+                        """.trimIndent()
+                    }.joinToString("")
+                }
+
                 bodyContentHtml = """
                     <!-- 1. شرح کارها -->
                     <div class="section-title">۱. خلاصه شرح کار و فعالیت‌های اجرایی کارگاه</div>
@@ -667,6 +688,23 @@ object PdfGenerator {
                         $manpowerTableHeader
                         <tbody>
                             $manpowerRows
+                        </tbody>
+                    </table>
+
+                    <!-- 4. مصالح وارده -->
+                    <div class="section-title">۴. آمار ورود مصالح و متریال به کارگاه</div>
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%;">ردیف</th>
+                                <th style="width: 35%;">نوع مصالح/کالا وارده</th>
+                                <th style="width: 15%;">مقدار</th>
+                                <th style="width: 12%;">واحد</th>
+                                <th style="width: 33%;">توضیحات و محل تخلیه</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            $executionMaterialsRows
                         </tbody>
                     </table>
                 """.trimIndent()
@@ -741,11 +779,12 @@ object PdfGenerator {
                         font-weight: bold;
                         font-size: 14px;
                         color: #ffffff;
-                        background-color: #1e3a8a;
+                        background-color: #0284c7; /* Sky Blue variant */
                         padding: 6px 12px;
                         margin-top: 16px;
                         margin-bottom: 8px;
                         border-radius: 4px;
+                        border-right: 4px solid #0369a1;
                     }
                     
                     /* Elegant Industrial Grid Tables with rounded borders */
@@ -894,7 +933,7 @@ object PdfGenerator {
                         }
                         .section-title {
                             font-size: 12px !important;
-                            background-color: #333333 !important;
+                            background-color: #0284c7 !important; /* Sky Blue variant for print as well */
                             color: #ffffff !important;
                             padding: 4px 6px !important;
                             margin-top: 10px !important;
@@ -911,9 +950,9 @@ object PdfGenerator {
                             border: 1px solid #000000 !important;
                         }
                         table.report-table th {
-                            background-color: #e5e7eb !important;
-                            color: #000000 !important;
-                            border-bottom: 1.5px solid #000000 !important;
+                            background-color: #e0f2fe !important; /* Light sky blue background for table headers */
+                            color: #0369a1 !important; /* Dark blue text */
+                            border-bottom: 1.5px solid #0284c7 !important;
                         }
                         table.report-table tr {
                             background-color: #ffffff !important;
@@ -1025,9 +1064,68 @@ object PdfGenerator {
                         </td>
                     </tr>
                 </table>
+                
+                ${generatePhotosPages(context, report, photos)}
             </body>
             </html>
         """.trimIndent()
+    }
+
+    private fun generatePhotosPages(context: Context, report: DailyReport, photos: List<com.example.data.model.DailyPhoto>): String {
+        if (photos.isEmpty()) return ""
+
+        val pages = photos.take(4).chunked(4)
+        return pages.joinToString("") { pagePhotos ->
+            val pageHtml = StringBuilder()
+            pageHtml.append("<div style=\"page-break-before: always; width: 100%; height: 96%; display: flex; flex-direction: column;\">")
+            
+            // Header for Photo Page
+            pageHtml.append("""
+                <div class="header-container" style="margin-bottom: 20px; flex-shrink: 0;">
+                    <div class="main-title">پیوست تصاویر گزارش روزانه</div>
+                    <table class="meta-grid">
+                        <tr>
+                            <td><strong>پروژه:</strong> ${report.project.ifEmpty { "---" }}</td>
+                            <td><strong>تاریخ:</strong> ${report.date.ifEmpty { "---" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            """.trimIndent())
+
+            val containerStyle = "display: grid; gap: 16px; flex-grow: 1; width: 100%; box-sizing: border-box;"
+            val gridTemplate = when (pagePhotos.size) {
+                1 -> "grid-template-columns: 1fr; grid-template-rows: 1fr;"
+                2 -> "grid-template-columns: 1fr; grid-template-rows: 1fr 1fr;"
+                3 -> "grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;"
+                else -> "grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;"
+            }
+            
+            pageHtml.append("<div style=\"$containerStyle $gridTemplate\">")
+            
+            pagePhotos.forEachIndexed { index, photo ->
+                val base64 = uriToBase64(context, photo.uri)
+                if (base64.isNotEmpty()) {
+                    val itemStyle = if (pagePhotos.size == 3 && index == 0) {
+                        "grid-column: 1 / 3; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px solid #cbd5e1; padding: 12px; border-radius: 8px; background-color: #f8fafc; overflow: hidden; box-sizing: border-box;"
+                    } else {
+                        "display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px solid #cbd5e1; padding: 12px; border-radius: 8px; background-color: #f8fafc; overflow: hidden; box-sizing: border-box;"
+                    }
+                    
+                    pageHtml.append("""
+                        <div style="$itemStyle">
+                            <div style="flex-grow: 1; width: 100%; height: calc(100% - 28px); display: flex; justify-content: center; align-items: center; overflow: hidden;">
+                                <img src="$base64" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px;" />
+                            </div>
+                            <div style="font-weight: bold; font-size: 14px; text-align: center; color: #1e3a8a; height: 20px; line-height: 20px; margin-top: 8px; flex-shrink: 0;">
+                                ${photo.description.ifEmpty { "بدون عنوان" }}
+                            </div>
+                        </div>
+                    """.trimIndent())
+                }
+            }
+            pageHtml.append("</div></div>")
+            pageHtml.toString()
+        }
     }
 
     // Direct system share function
@@ -1045,6 +1143,48 @@ object PdfGenerator {
         }
         
         context.startActivity(Intent.createChooser(intent, "ارسال گزارش روزانه کارگاه"))
+    }
+
+    private fun uriToBase64(context: Context, uriString: String): String {
+        return try {
+            val uri = Uri.parse(uriString)
+            val inputStream = context.contentResolver.openInputStream(uri)
+            val originalBitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
+            inputStream?.close()
+            
+            if (originalBitmap != null) {
+                // Resize if needed
+                val maxWidth = 1024
+                val maxHeight = 1024
+                val ratioBitmap = originalBitmap.width.toFloat() / originalBitmap.height.toFloat()
+                var finalWidth = maxWidth
+                var finalHeight = maxHeight
+                if (ratioBitmap > 1) {
+                    finalWidth = maxWidth
+                    finalHeight = (maxWidth / ratioBitmap).toInt()
+                } else {
+                    finalHeight = maxHeight
+                    finalWidth = (maxHeight * ratioBitmap).toInt()
+                }
+                
+                // Only scale if the image is larger than max
+                val scaledBitmap = if (originalBitmap.width > maxWidth || originalBitmap.height > maxHeight) {
+                    android.graphics.Bitmap.createScaledBitmap(originalBitmap, finalWidth, finalHeight, true)
+                } else {
+                    originalBitmap
+                }
+                
+                val outputStream = java.io.ByteArrayOutputStream()
+                scaledBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 70, outputStream)
+                val bytes = outputStream.toByteArray()
+                
+                "data:image/jpeg;base64," + android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+            } else {
+                ""
+            }
+        } catch (e: Exception) {
+            ""
+        }
     }
 
     private fun formatKmRangeHtml(startKm: String, endKm: String): String {

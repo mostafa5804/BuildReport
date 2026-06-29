@@ -51,6 +51,19 @@ data class MaterialEntry(
     val receiver: String = "" // receiver of material (for exits)
 )
 
+@JsonClass(generateAdapter = true)
+data class LegalPermitEntry(
+    val title: String = "",
+    val organization: String = "",
+    val comments: String = ""
+)
+
+@JsonClass(generateAdapter = true)
+data class DailyPhoto(
+    val uri: String,
+    val description: String = ""
+)
+
 @Entity(tableName = "daily_reports")
 data class DailyReport(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
@@ -66,6 +79,8 @@ data class DailyReport(
     val machinery: List<MachineryEntry> = emptyList(),
     val manpower: List<ManpowerEntry> = emptyList(),
     val materials: List<MaterialEntry> = emptyList(),
+    val legalPermits: List<LegalPermitEntry> = emptyList(),
+    val photos: List<String> = emptyList(),
     val obstacles: String = "",
     val tomorrowPlan: String = "",
     val reportType: String = "EXECUTION" // "EXECUTION" (اجرا) or "WAREHOUSE" (انبار)

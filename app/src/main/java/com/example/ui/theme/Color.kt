@@ -2,29 +2,46 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Construction Modern Palette (Teal & Amber Accent)
-val MutedTealGreen = Color(0xFF0F766E)       // Deep Teal 700
-val MutedTealLight = Color(0xFFE6F4F1)       // Very soft light teal
-val NaturalAmber = Color(0xFFD97706)        // Natural Amber 600
-val LightAmberBg = Color(0xFFFEF3C7)        // Light amber bg (Amber 100)
-val SoftTealBackground = Color(0xFFF2FAF7)  // Very light, soft green-teal surface
-val SoftWhiteSurface = Color(0xFFFAFEFC)    // Soft white surface
-val TextPrimary = Color(0xFF0F172A)         // Slate 900
-val TextSecondary = Color(0xFF475569)       // Slate 600
-val BorderColor = Color(0xFFCBD5E1)         // Slate 300
+// Modern Premium Enterprise 2026 Palette
+val DeepTeal = Color(0xFF00695C)        // Primary Deep Teal
+val Emerald = Color(0xFF00A884)         // Secondary Emerald
+val AmberAccent = Color(0xFFF4B400)     // Accent Amber
+val DesignBackground = Color(0xFFF8FAFB) // Premium light grey-blue background
+val DesignSurface = Color(0xFFFFFFFF)    // Pure White Surface
 
-// Legacy names for reference or simplicity
-val PrimaryBlue = MutedTealGreen
-val PrimaryBlueDark = Color(0xFF2DD4BF)
-val SecondaryAmber = NaturalAmber
-val SecondaryAmberDark = Color(0xFFFBBF24)
-val TertiaryEmerald = Color(0xFF10B981)
+val DesignTextPrimary = Color(0xFF1F2937)   // Slate 800 (Text Primary)
+val DesignTextSecondary = Color(0xFF6B7280) // Slate 500 (Text Secondary)
+
+val DesignSuccess = Color(0xFF16A34A)
+val DesignWarning = Color(0xFFF59E0B)
+val DesignError = Color(0xFFDC2626)
+
+// Dark Theme Variants
+val DeepTealDark = Color(0xFF4DB6AC)
+val EmeraldDark = Color(0xFF4EF0C9)
+val AmberAccentDark = Color(0xFFFFD54F)
+val BackgroundDark = Color(0xFF0B111E)
+val SurfaceDark = Color(0xFF162032)
+
+// Map existing variables to keep backward compatibility and maintain layout consistency
+val MutedTealGreen = DeepTeal
+val MutedTealLight = Color(0xFFE0F2F1)
+val NaturalAmber = AmberAccent
+val LightAmberBg = Color(0xFFFFF8E1)
+val SoftTealBackground = DesignBackground
+val SoftWhiteSurface = DesignSurface
+val TextPrimary = DesignTextPrimary
+val TextSecondary = DesignTextSecondary
+val BorderColor = Color(0xFFE5E7EB)
+
+val PrimaryBlue = DeepTeal
+val PrimaryBlueDark = DeepTealDark
+val SecondaryAmber = AmberAccent
+val SecondaryAmberDark = AmberAccentDark
+val TertiaryEmerald = Emerald
 val BackgroundLight = SoftTealBackground
 val SurfaceLight = SoftWhiteSurface
-val BackgroundDark = Color(0xFF111827)      // Deep charcoal gray
-val SurfaceDark = Color(0xFF1F2937)         // Dark teal/charcoal card surface
 
-// Statuses
-val StatusDone = Color(0xFF10B981)
-val StatusPending = Color(0xFFF59E0B)
-val StatusDelay = Color(0xFFEF4444)
+val StatusDone = DesignSuccess
+val StatusPending = DesignWarning
+val StatusDelay = DesignError

@@ -8,32 +8,39 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme =
   darkColorScheme(
-    primary = PrimaryBlueDark,
-    secondary = SecondaryAmberDark,
-    tertiary = TertiaryEmerald,
+    primary = DeepTealDark,
+    secondary = EmeraldDark,
+    tertiary = AmberAccentDark,
     background = BackgroundDark,
     surface = SurfaceDark,
-    onPrimary = SurfaceLight,
-    onSecondary = SurfaceLight,
-    onBackground = BackgroundLight,
-    onSurface = BackgroundLight
+    onPrimary = Color(0xFF0F172A),
+    onSecondary = Color(0xFF0F172A),
+    onTertiary = Color(0xFF0F172A),
+    onBackground = Color(0xFFF1F5F9),
+    onSurface = Color(0xFFF1F5F9),
+    surfaceVariant = Color(0xFF1E293B),
+    onSurfaceVariant = Color(0xFF94A3B8)
   )
 
 private val LightColorScheme =
   lightColorScheme(
-    primary = PrimaryBlue,
-    secondary = SecondaryAmber,
-    tertiary = TertiaryEmerald,
-    background = BackgroundLight,
-    surface = SurfaceLight,
-    onPrimary = SurfaceLight,
-    onSecondary = SurfaceLight,
-    onBackground = TextPrimary,
-    onSurface = TextPrimary
+    primary = DeepTeal,
+    secondary = Emerald,
+    tertiary = AmberAccent,
+    background = DesignBackground,
+    surface = DesignSurface,
+    onPrimary = Color.White,
+    onSecondary = Color.White,
+    onTertiary = Color.White,
+    onBackground = DesignTextPrimary,
+    onSurface = DesignTextPrimary,
+    surfaceVariant = Color(0xFFF1F5F9),
+    onSurfaceVariant = DesignTextSecondary
   )
 
 @Composable

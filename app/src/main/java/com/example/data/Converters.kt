@@ -58,4 +58,28 @@ class Converters {
         val type = Types.newParameterizedType(List::class.java, MaterialEntry::class.java)
         return moshi.adapter<List<MaterialEntry>>(type).fromJson(json)
     }
+
+    @TypeConverter
+    fun fromLegalPermitList(list: List<LegalPermitEntry>?): String {
+        val type = Types.newParameterizedType(List::class.java, LegalPermitEntry::class.java)
+        return moshi.adapter<List<LegalPermitEntry>>(type).toJson(list ?: emptyList())
+    }
+
+    @TypeConverter
+    fun toLegalPermitList(json: String): List<LegalPermitEntry>? {
+        val type = Types.newParameterizedType(List::class.java, LegalPermitEntry::class.java)
+        return moshi.adapter<List<LegalPermitEntry>>(type).fromJson(json)
+    }
+
+    @TypeConverter
+    fun fromStringList(list: List<String>?): String {
+        val type = Types.newParameterizedType(List::class.java, String::class.java)
+        return moshi.adapter<List<String>>(type).toJson(list ?: emptyList())
+    }
+
+    @TypeConverter
+    fun toStringList(json: String): List<String>? {
+        val type = Types.newParameterizedType(List::class.java, String::class.java)
+        return moshi.adapter<List<String>>(type).fromJson(json)
+    }
 }
