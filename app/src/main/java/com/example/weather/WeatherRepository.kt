@@ -45,20 +45,14 @@ object WeatherRepository {
     // Convert WMO weather code to icon and description
     fun getWeatherCodeInfo(code: Int, isDay: Boolean = true): Pair<String, String> {
         return when (code) {
-            0, 1 -> if (isDay) "☀️" to "صاف" else "🌙" to "صاف"
+            0, 1 -> if (isDay) "☀️" to "آفتابی" else "🌙" to "صاف"
             2 -> if (isDay) "⛅" to "نیمه ابری" else "☁️" to "نیمه ابری"
             3 -> "☁️" to "ابری"
             45, 48 -> "🌫️" to "مه‌آلود"
-            51, 53, 55 -> "🌧️" to "نم‌نم باران"
-            56, 57 -> "🌨️" to "باران یخ‌زده"
-            61, 63, 65 -> "🌧️" to "بارانی"
-            66, 67 -> "🌨️" to "باران یخی"
-            71, 73, 75 -> "❄️" to "برفی"
-            77 -> "❄️" to "دانه‌های برف"
-            80, 81, 82 -> "🌦️" to "رگبار"
-            85, 86 -> "🌨️" to "رگبار برف"
-            95 -> "⛈️" to "رعد و برق"
-            96, 99 -> "⛈️" to "رعد و برق و تگرگ"
+            in 51..55 -> "🌧️" to "باران ریزه"
+            in 61..65 -> "🌧️" to "بارانی"
+            in 71..75 -> "❄️" to "برفی"
+            in 95..99 -> "⛈️" to "رعد و برق"
             else -> "❓" to "نامشخص"
         }
     }

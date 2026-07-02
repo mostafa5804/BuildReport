@@ -2007,6 +2007,7 @@ fun LegalPermitsTabRedesigned(
     var title by remember { mutableStateOf("") }
     var organization by remember { mutableStateOf("") }
     var comments by remember { mutableStateOf("") }
+    var editingIndex by remember { mutableStateOf<Int?>(null) }
 
     val context = LocalContext.current
 
@@ -2027,7 +2028,7 @@ fun LegalPermitsTabRedesigned(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    "افزودن مجوز یا استعلام جدید ➕",
+                    if (editingIndex == null) "افزودن مجوز یا استعلام جدید ➕" else "ویرایش مجوز یا استعلام ✏️",
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.primary
@@ -2071,20 +2072,42 @@ fun LegalPermitsTabRedesigned(
                             organization = organization,
                             comments = comments
                         )
-                        viewModel.updateCurrentReport { r -> r.copy(legalPermits = r.legalPermits + entry) }
+                        if (editingIndex == null) {
+                            viewModel.updateCurrentReport { r -> r.copy(legalPermits = r.legalPermits + entry) }
+                            Toast.makeText(context, "مجوز افزوده شد", Toast.LENGTH_SHORT).show()
+                        } else {
+                            val updated = report.legalPermits.toMutableList()
+                            updated[editingIndex!!] = entry
+                            viewModel.updateCurrentReport { r -> r.copy(legalPermits = updated) }
+                            Toast.makeText(context, "مجوز ویرایش شد", Toast.LENGTH_SHORT).show()
+                            editingIndex = null
+                        }
                         
                         // Clear form
                         title = ""
                         organization = ""
                         comments = ""
-                        Toast.makeText(context, "مجوز افزوده شد", Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(Icons.Default.Add, null)
+                    Icon(if (editingIndex == null) Icons.Default.Add else Icons.Default.Edit, null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("ثبت مجوز")
+                    Text(if (editingIndex == null) "ثبت مجوز" else "ثبت ویرایش")
+                }
+                
+                if (editingIndex != null) {
+                    TextButton(
+                        onClick = {
+                            editingIndex = null
+                            title = ""
+                            organization = ""
+                            comments = ""
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("انصراف", color = MaterialTheme.colorScheme.error)
+                    }
                 }
             }
         }
@@ -2144,6 +2167,17 @@ fun LegalPermitsTabRedesigned(
                                 ) {
                                     Icon(Icons.Default.KeyboardArrowDown, "پایین", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                                 }
+                            }
+                            IconButton(
+                                onClick = {
+                                    title = permit.title
+                                    organization = permit.organization
+                                    comments = permit.comments
+                                    editingIndex = index
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(Icons.Default.Edit, "ویرایش", tint = Color(0xFF2563EB), modifier = Modifier.size(18.dp))
                             }
                             IconButton(
                                 onClick = {

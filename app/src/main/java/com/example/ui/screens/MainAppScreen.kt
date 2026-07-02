@@ -281,7 +281,7 @@ fun ProjectDashboardTab(
                     Icon(
                         painter = painterResource(id = com.example.R.drawable.ic_launcher_foreground),
                         contentDescription = "Logo",
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = androidx.compose.ui.graphics.Color.Unspecified,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -807,7 +807,8 @@ fun WeatherCitySearchDialog(
 @Composable
 fun ProjectSettingsTab(
     viewModel: ReportViewModel,
-    importLauncher: androidx.activity.result.ActivityResultLauncher<String>
+    importLauncher: androidx.activity.result.ActivityResultLauncher<String>,
+    exportLauncher: androidx.activity.result.ActivityResultLauncher<String>
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
@@ -1335,12 +1336,10 @@ fun ProjectSettingsTab(
                         ) {
                             Button(
                                 onClick = {
-                                    val exported = viewModel.exportBackup()
-                                    if (exported.isNotEmpty()) {
-                                        val clipboardManager = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                        val clip = android.content.ClipData.newPlainText("ReportJarBackup", exported)
-                                        clipboardManager.setPrimaryClip(clip)
-                                        Toast.makeText(context, "نسخه پشتیبان کپی شد! آن را ذخیره کنید ✅", Toast.LENGTH_LONG).show()
+                                    try {
+                                        exportLauncher.launch("DailyReportsBackup.json")
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "خطا در ذخیره فایل", Toast.LENGTH_SHORT).show()
                                     }
                                 },
                                 modifier = Modifier.weight(1f),
@@ -1707,7 +1706,7 @@ fun AboutAppTab(viewModel: ReportViewModel) {
                     shape = CircleShape
                 ) {
                     Text(
-                        text = "نسخه ۳.۰.۷",
+                        text = "نسخه ۳.۰.۸",
                         color = Color.White,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
@@ -1768,7 +1767,7 @@ fun AboutAppTab(viewModel: ReportViewModel) {
                     )
                     
                     Text(
-                        text = "✨ قابلیت‌های جدید (نسخه ۳.۰.۷):\n- دریافت و نمایش خودکار وضعیت آب‌وهوا با امکان به‌روزرسانی.\n- امکان پیوست تا ۴ تصویر با کیفیت بالا برای هر گزارش، همراه با کش اختصاصی برای نگهداری ۷ روزه تصاویر.\n- چیدمان هوشمند و متقارن تصاویر در خروجی PDF.",
+                        text = "✨ قابلیت‌های جدید (نسخه ۳.۰.۸):\n- رفع اشکال عدم نمایش لیست استعلامات در خروجی PDF.\n- قابلیت افزودن، ویرایش و حذف استعلامات در بخش حقوقی.\n- پشتیبان‌گیری استاندارد فایل JSON به جای متن قابل کپی.\n- اصلاح آیکون اصلی در نوار داشبورد.\n- دریافت و نمایش خودکار وضعیت آب‌وهوا با امکان به‌روزرسانی.\n- امکان پیوست تا ۴ تصویر با کیفیت بالا برای هر گزارش.",
                         fontSize = 13.5.sp,
                         color = MaterialTheme.colorScheme.onSurface,
                         lineHeight = 24.sp,
@@ -1825,7 +1824,7 @@ fun AboutAppTab(viewModel: ReportViewModel) {
                                 val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                     type = "message/rfc822"
                                     putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf("MOSTAFA5804@GMAIL.COM"))
-                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "پشتیبان داده‌های کارگاه - نسخه ۳.۰.۷")
+                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "پشتیبان داده‌های کارگاه - نسخه ۳.۰.۸")
                                     putExtra(android.content.Intent.EXTRA_TEXT, "با سلام،\nپشتیبان اطلاعات پروژه‌های من در فایل پیوست قرار دارد.")
                                     putExtra(android.content.Intent.EXTRA_STREAM, fileUri)
                                     addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -3189,6 +3188,22 @@ fun MainAppScreen(
         }
     }
 
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri: android.net.Uri? ->
+        if (uri != null) {
+            try {
+                val exported = viewModel.exportBackup()
+                context.contentResolver.openOutputStream(uri)?.use { 
+                    it.write(exported.toByteArray())
+                }
+                Toast.makeText(context, "نسخه پشتیبان با موفقیت ذخیره شد ✅", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(context, "خطا در ذخیره فایل بکاپ ❌", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         if (currentReport != null) {
             ReportEditorScreen(
@@ -3259,7 +3274,8 @@ fun MainAppScreen(
                         )
                         2 -> ProjectSettingsTab(
                             viewModel = viewModel,
-                            importLauncher = importLauncher
+                            importLauncher = importLauncher,
+                            exportLauncher = exportLauncher
                         )
                         3 -> AboutAppTab(
                             viewModel = viewModel

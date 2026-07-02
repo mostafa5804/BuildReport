@@ -232,16 +232,16 @@ object PdfGenerator {
                     }.joinToString("")
                 }
 
-                // Inquiries & Permits list stored in 'materials'
-                val inquiriesRows = if (report.materials.isEmpty()) {
+                // Inquiries & Permits list stored in 'legalPermits'
+                val inquiriesRows = if (report.legalPermits.isEmpty()) {
                     "<tr><td colspan='4' class='text-muted'>هیچ استعلام یا مجوز قانونی در این روز ثبت نگردیده است</td></tr>"
                 } else {
-                    report.materials.mapIndexed { index, item ->
+                    report.legalPermits.mapIndexed { index, item ->
                         """
                         <tr>
                             <td class="cell-index">${index + 1}</td>
-                            <td class="cell-main">${item.type}</td>
-                            <td><strong>${item.receiver.ifEmpty { "---" }}</strong></td>
+                            <td class="cell-main">${item.title}</td>
+                            <td><strong>${item.organization.ifEmpty { "---" }}</strong></td>
                             <td class="cell-desc">${item.comments.ifEmpty { "---" }}</td>
                         </tr>
                         """.trimIndent()
