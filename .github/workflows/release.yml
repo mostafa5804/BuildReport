@@ -23,8 +23,19 @@ jobs:
           if [ -f "debug.keystore.base64" ]; then
             echo "Decoding debug.keystore..."
             base64 -d debug.keystore.base64 > debug.keystore
+            echo "✅ Debug keystore decoded."
           else
-            echo "debug.keystore.base64 not found."
+            echo "ℹ️ debug.keystore.base64 not found. Using default debug keystore."
+          fi
+
+      - name: Decode Release Keystore 🔑
+        run: |
+          if [ -n "${{ secrets.SIGNING_KEY }}" ]; then
+            echo "Decoding release keystore..."
+            echo "${{ secrets.SIGNING_KEY }}" | base64 -d > release.keystore
+            echo "✅ Release keystore decoded successfully."
+          else
+            echo "⚠️ SIGNING_KEY secret is not set. Release will be unsigned!"
           fi
 
       - name: Set up JDK 21 ☕
@@ -37,61 +48,16 @@ jobs:
       - name: Setup Gradle ⚙️
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '9.3.1' # Fully compatible with AGP 9.1.1!
+          gradle-version: '9.3.1'
           validate-wrappers: false
 
       - name: Build Debug/Release APKs & Bundle (AAB) 🛠️
         run: gradle assembleDebug assembleRelease bundleRelease --stacktrace
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/release.keystore
+          STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
-            - name: Sign APK & AAB natively ✍️
-        run: |
-          if [ -n "${{ secrets.SIGNING_KEY }}" ]; then
-            echo "Signing key detected. Decrypting keystore file..."
-            echo "${{ secrets.SIGNING_KEY }}" | base64 -d > release.keystore
-            
-            # Sign Release APK using apksigner
-            echo "Locating apksigner tool..."
-            BUILD_TOOLS_VERSION=$(ls -1 "$ANDROID_HOME/build-tools" | sort -V | tail -n 1)
-            APKSIGNER="$ANDROID_HOME/build-tools/$BUILD_TOOLS_VERSION/apksigner"
-            echo "Using apksigner version in $BUILD_TOOLS_VERSION"
-            
-            # پیدا کردن APK بدون امضا (همه فایل‌های apk رو لیست کن)
-            echo "Listing all APK files in release folder:"
-            find app/build/outputs/apk/release -name "*.apk" -type f
-            
-            # انتخاب اولین APK که "signed" در اسمش نیست
-            UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*.apk" -type f | grep -v "signed" | head -n 1)
-            
-            if [ -n "$UNSIGNED_APK" ] && [ -f "$UNSIGNED_APK" ]; then
-              echo "Signing APK: $UNSIGNED_APK"
-              $APKSIGNER sign --ks release.keystore \
-                --ks-key-alias "${{ secrets.KEY_ALIAS }}" \
-                --ks-pass pass:"${{ secrets.KEY_STORE_PASSWORD }}" \
-                --key-pass pass:"${{ secrets.KEY_PASSWORD }}" \
-                --out app/build/outputs/apk/release/BuildReportYar-release-signed.apk \
-                "$UNSIGNED_APK"
-              echo "✅ Successfully signed custom APK."
-            else
-              echo "❌ No unsigned APK found. Available files:"
-              find app/build/outputs/apk/release -name "*.apk" -type f
-              exit 1
-            fi
-            
-            # AAB دیگه امضا نمیکنیم چون Gradle خودش امضا کرده
-            AAB_FILE=$(find app/build/outputs/bundle/release -name "*.aab" -type f | head -n 1)
-            if [ -n "$AAB_FILE" ] && [ -f "$AAB_FILE" ]; then
-              echo "AAB already signed by Gradle: $AAB_FILE"
-              # فقط rename میکنیم
-              cp "$AAB_FILE" app/build/outputs/bundle/release/BuildReportYar-release-signed.aab
-              echo "✅ Copied AAB to BuildReportYar-release-signed.aab"
-            else
-              echo "⚠️ No AAB file found."
-            fi
-            
-            rm -f release.keystore
-          else
-            echo "⚠️ SIGNING_KEY secret is not provided. Skipping signature steps."
-          fi
       - name: Upload Build Artifacts to Actions Tab 📥
         uses: actions/upload-artifact@v4
         with:
@@ -108,8 +74,7 @@ jobs:
         with:
           files: |
             app/build/outputs/apk/debug/*.apk
-            app/build/outputs/apk/release/*signed*.apk
-            app/build/outputs/apk/release/*unsigned*.apk
+            app/build/outputs/apk/release/*.apk
             app/build/outputs/bundle/release/*.aab
           draft: false
           prerelease: false
