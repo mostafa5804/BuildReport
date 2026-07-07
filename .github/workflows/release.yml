@@ -43,19 +43,25 @@ jobs:
       - name: Build Debug/Release APKs & Bundle (AAB) 🛠️
         run: gradle assembleDebug assembleRelease bundleRelease --stacktrace
 
-      - name: Sign APK & AAB natively ✍️
+            - name: Sign APK & AAB natively ✍️
         run: |
           if [ -n "${{ secrets.SIGNING_KEY }}" ]; then
             echo "Signing key detected. Decrypting keystore file..."
             echo "${{ secrets.SIGNING_KEY }}" | base64 -d > release.keystore
             
-            # 1. Sign Release APK using standard Android SDK apksigner
+            # Sign Release APK using apksigner
             echo "Locating apksigner tool..."
             BUILD_TOOLS_VERSION=$(ls -1 "$ANDROID_HOME/build-tools" | sort -V | tail -n 1)
             APKSIGNER="$ANDROID_HOME/build-tools/$BUILD_TOOLS_VERSION/apksigner"
             echo "Using apksigner version in $BUILD_TOOLS_VERSION"
             
-            UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*.apk" -not -name "*signed*")
+            # پیدا کردن APK بدون امضا (همه فایل‌های apk رو لیست کن)
+            echo "Listing all APK files in release folder:"
+            find app/build/outputs/apk/release -name "*.apk" -type f
+            
+            # انتخاب اولین APK که "signed" در اسمش نیست
+            UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*.apk" -type f | grep -v "signed" | head -n 1)
+            
             if [ -n "$UNSIGNED_APK" ] && [ -f "$UNSIGNED_APK" ]; then
               echo "Signing APK: $UNSIGNED_APK"
               $APKSIGNER sign --ks release.keystore \
@@ -64,30 +70,28 @@ jobs:
                 --key-pass pass:"${{ secrets.KEY_PASSWORD }}" \
                 --out app/build/outputs/apk/release/BuildReportYar-release-signed.apk \
                 "$UNSIGNED_APK"
-              echo "Successfully signed custom APK."
+              echo "✅ Successfully signed custom APK."
             else
-              echo "No unsigned APK found or signed APK already exists."
+              echo "❌ No unsigned APK found. Available files:"
+              find app/build/outputs/apk/release -name "*.apk" -type f
+              exit 1
             fi
             
-            # 2. Sign App Bundle (AAB) using native Oracle jarsigner from JDK
-            AAB_FILE=$(find app/build/outputs/bundle/release -name "*.aab")
+            # AAB دیگه امضا نمیکنیم چون Gradle خودش امضا کرده
+            AAB_FILE=$(find app/build/outputs/bundle/release -name "*.aab" -type f | head -n 1)
             if [ -n "$AAB_FILE" ] && [ -f "$AAB_FILE" ]; then
-              echo "Signing App Bundle (AAB): $AAB_FILE"
-              jarsigner -keystore release.keystore \
-                -storepass "${{ secrets.KEY_STORE_PASSWORD }}" \
-                -keypass "${{ secrets.KEY_PASSWORD }}" \
-                "$AAB_FILE" \
-                "${{ secrets.KEY_ALIAS }}"
-              mv "$AAB_FILE" app/build/outputs/bundle/release/BuildReportYar-release-signed.aab
-              echo "Successfully signed and renamed custom AAB."
+              echo "AAB already signed by Gradle: $AAB_FILE"
+              # فقط rename میکنیم
+              cp "$AAB_FILE" app/build/outputs/bundle/release/BuildReportYar-release-signed.aab
+              echo "✅ Copied AAB to BuildReportYar-release-signed.aab"
+            else
+              echo "⚠️ No AAB file found."
             fi
             
-            # Clean up the key store file so it does not persist
             rm -f release.keystore
           else
-            echo "⚠️ SIGNING_KEY secret is not provided. Skipping signature steps. The outputs will remain unsigned."
+            echo "⚠️ SIGNING_KEY secret is not provided. Skipping signature steps."
           fi
-
       - name: Upload Build Artifacts to Actions Tab 📥
         uses: actions/upload-artifact@v4
         with:
