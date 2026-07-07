@@ -279,9 +279,9 @@ fun ProjectDashboardTab(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        painter = painterResource(id = com.example.R.drawable.ic_launcher_foreground),
+                        imageVector = androidx.compose.material.icons.Icons.Default.Engineering,
                         contentDescription = "Logo",
-                        tint = androidx.compose.ui.graphics.Color.Unspecified,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
