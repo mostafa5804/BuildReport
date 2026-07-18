@@ -3,8 +3,8 @@ name: Android CI/CD & Auto Release 🚀
 on:
   push:
     tags:
-      - 'v*'
-  workflow_dispatch:
+      - 'v*' # Triggers workflow when pushing a tag like v1.0.0
+  workflow_dispatch: # Allows manual trigger from the GitHub Actions tab
 
 jobs:
   build:
@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write
+      contents: write # Required for creating GitHub Releases
 
     steps:
       - name: Checkout Code 📂
@@ -51,10 +51,6 @@ jobs:
           gradle-version: '9.3.1'
           validate-wrappers: false
 
-      # =====================================================
-      # 🔥 مرحله جدید: حذف فایل‌های تکراری و برطرف‌کننده خطا
-      # =====================================================
-      
       - name: Build Debug/Release APKs & Bundle (AAB) 🛠️
         run: gradle assembleDebug assembleRelease bundleRelease --stacktrace
         env:

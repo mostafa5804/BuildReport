@@ -10,7 +10,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
 import com.example.data.AppDatabase
 import com.example.data.ReportRepository
-import com.example.ui.screens.dashboard.DashboardScreen
+import com.example.ui.screens.MainAppScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.viewmodel.ReportViewModel
 import com.example.ui.viewmodel.ReportViewModelFactory

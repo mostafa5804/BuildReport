@@ -890,64 +890,6 @@ object PdfGenerator {
                         font-weight: normal;
                     }
 
-
-                    .photo-page {
-                        page-break-before: always;
-                        width: 100%;
-                        height: 281mm;
-                        display: flex;
-                        flex-direction: column;
-                        overflow: hidden;
-                    }
-                    .photo-page .header-container {
-                        flex: 0 0 auto;
-                        margin-bottom: 8mm;
-                    }
-                    .photo-grid {
-                        flex: 1 1 auto;
-                        display: grid;
-                        grid-template-columns: 1fr 1fr;
-                        grid-template-rows: 1fr 1fr;
-                        gap: 7mm;
-                        min-height: 0;
-                    }
-                    .photo-cell {
-                        min-height: 0;
-                        display: flex;
-                        flex-direction: column;
-                        border: 1px solid #cbd5e1;
-                        border-radius: 8px;
-                        padding: 4mm;
-                        background: #f8fafc;
-                        overflow: hidden;
-                    }
-                    .photo-frame {
-                        flex: 1 1 auto;
-                        min-height: 0;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        overflow: hidden;
-                    }
-                    .photo-frame img {
-                        width: 100%;
-                        height: 100%;
-                        object-fit: contain;
-                        border-radius: 4px;
-                    }
-                    .photo-caption {
-                        flex: 0 0 auto;
-                        min-height: 18px;
-                        margin-top: 3mm;
-                        color: #1e3a8a;
-                        font-size: 12px;
-                        font-weight: bold;
-                        text-align: center;
-                        overflow: hidden;
-                        text-overflow: ellipsis;
-                        white-space: nowrap;
-                    }
-
                     /* =======================================================
                        PRINT STYLING (A4 - Grayscale & fits exactly on 1 Page)
                        ======================================================= */
@@ -1000,19 +942,7 @@ object PdfGenerator {
                         }
                         table.report-table {
                             margin-bottom: 10px !important;
-                            page-break-inside: auto;
-                            break-inside: auto;
-                        }
-                        table.report-table thead {
-                            display: table-header-group;
-                        }
-                        table.report-table tbody {
-                            display: table-row-group;
-                        }
-                        table.report-table tr {
                             page-break-inside: avoid;
-                            break-inside: avoid;
-                            page-break-after: auto;
                         }
                         table.report-table th, table.report-table td {
                             padding: 4px 4px !important;
@@ -1024,7 +954,7 @@ object PdfGenerator {
                             color: #0369a1 !important; /* Dark blue text */
                             border-bottom: 1.5px solid #0284c7 !important;
                         }
-                        table.report-table tbody tr {
+                        table.report-table tr {
                             background-color: #ffffff !important;
                         }
                         .cell-highlight {
@@ -1076,28 +1006,6 @@ object PdfGenerator {
                             border-top: 1px dashed #000000 !important;
                             width: 120px !important;
                         }
-                        .photo-page {
-                            height: 281mm !important;
-                            page-break-before: always;
-                            page-break-inside: avoid;
-                            break-inside: avoid;
-                        }
-                        .photo-grid {
-                            gap: 5mm !important;
-                        }
-                        .photo-cell {
-                            padding: 3mm !important;
-                            border: 1px solid #000000 !important;
-                            background: #ffffff !important;
-                            page-break-inside: avoid;
-                            break-inside: avoid;
-                        }
-                        .photo-caption {
-                            color: #000000 !important;
-                            font-size: 10px !important;
-                            margin-top: 2mm !important;
-                        }
-
                     }
                 </style>
             </head>
@@ -1163,22 +1071,17 @@ object PdfGenerator {
         """.trimIndent()
     }
 
-    private data class PdfPhoto(val base64: String, val description: String)
-
     private fun generatePhotosPages(context: Context, report: DailyReport, photos: List<com.example.data.model.DailyPhoto>): String {
         if (photos.isEmpty()) return ""
 
-        val validPhotos = photos.mapNotNull { photo ->
-            val base64 = uriToBase64(context, photo.uri)
-            if (base64.isBlank()) null else PdfPhoto(base64, photo.description.ifEmpty { "بدون عنوان" })
-        }
-        if (validPhotos.isEmpty()) return ""
-
-        return validPhotos.chunked(4).joinToString("") { pagePhotos ->
+        val pages = photos.take(4).chunked(4)
+        return pages.joinToString("") { pagePhotos ->
             val pageHtml = StringBuilder()
-            pageHtml.append("<div class=\"photo-page\">")
+            pageHtml.append("<div style=\"page-break-before: always; width: 100%; height: 96%; display: flex; flex-direction: column;\">")
+            
+            // Header for Photo Page
             pageHtml.append("""
-                <div class="header-container">
+                <div class="header-container" style="margin-bottom: 20px; flex-shrink: 0;">
                     <div class="main-title">پیوست تصاویر گزارش روزانه</div>
                     <table class="meta-grid">
                         <tr>
@@ -1187,26 +1090,39 @@ object PdfGenerator {
                         </tr>
                     </table>
                 </div>
-                <div class="photo-grid">
             """.trimIndent())
 
-            pagePhotos.forEach { photo ->
-                pageHtml.append("""
-                    <div class="photo-cell">
-                        <div class="photo-frame">
-                            <img src="${photo.base64}" />
+            val containerStyle = "display: grid; gap: 16px; flex-grow: 1; width: 100%; box-sizing: border-box;"
+            val gridTemplate = when (pagePhotos.size) {
+                1 -> "grid-template-columns: 1fr; grid-template-rows: 1fr;"
+                2 -> "grid-template-columns: 1fr; grid-template-rows: 1fr 1fr;"
+                3 -> "grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;"
+                else -> "grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;"
+            }
+            
+            pageHtml.append("<div style=\"$containerStyle $gridTemplate\">")
+            
+            pagePhotos.forEachIndexed { index, photo ->
+                val base64 = uriToBase64(context, photo.uri)
+                if (base64.isNotEmpty()) {
+                    val itemStyle = if (pagePhotos.size == 3 && index == 0) {
+                        "grid-column: 1 / 3; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px solid #cbd5e1; padding: 12px; border-radius: 8px; background-color: #f8fafc; overflow: hidden; box-sizing: border-box;"
+                    } else {
+                        "display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px solid #cbd5e1; padding: 12px; border-radius: 8px; background-color: #f8fafc; overflow: hidden; box-sizing: border-box;"
+                    }
+                    
+                    pageHtml.append("""
+                        <div style="$itemStyle">
+                            <div style="flex-grow: 1; width: 100%; height: calc(100% - 28px); display: flex; justify-content: center; align-items: center; overflow: hidden;">
+                                <img src="$base64" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px;" />
+                            </div>
+                            <div style="font-weight: bold; font-size: 14px; text-align: center; color: #1e3a8a; height: 20px; line-height: 20px; margin-top: 8px; flex-shrink: 0;">
+                                ${photo.description.ifEmpty { "بدون عنوان" }}
+                            </div>
                         </div>
-                        <div class="photo-caption">${photo.description}</div>
-                    </div>
-                """.trimIndent())
+                    """.trimIndent())
+                }
             }
-
-            repeat(4 - pagePhotos.size) {
-                pageHtml.append("""
-                    <div class="photo-cell" style="opacity: 0; border: 0;"></div>
-                """.trimIndent())
-            }
-
             pageHtml.append("</div></div>")
             pageHtml.toString()
         }
