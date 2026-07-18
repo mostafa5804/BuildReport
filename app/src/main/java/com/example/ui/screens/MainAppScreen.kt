@@ -17,8 +17,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -219,6 +221,8 @@ fun ActivityItemCard(
         }
     }
 }
+
+// Dashboard screen moved to dashboard/DashboardScreen.kt for better feature modularity.
 
 // --- REDESIGNED SCREEN 1: PROJECT COMMAND CENTER ---
 @OptIn(ExperimentalMaterial3Api::class)
@@ -649,7 +653,7 @@ fun ReportCategoryChart(reports: List<DailyReport>, customUnitTitle: String) {
         }
     }
 }
-
+main
 
 // --- REDESIGNED SCREEN 2: SETTINGS (with Expandable Group Cards) ---
 @Composable
@@ -825,7 +829,7 @@ fun ProjectSettingsTab(
                 ) {
                     Text(
                         text = "تنظیمات پیش‌فرض کارگاه",
-                        color = MaterialTheme.colorScheme.onPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp
                     )
@@ -1809,7 +1813,7 @@ fun ReportListScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.primary)
+                        .background(MaterialTheme.colorScheme.surface)
                         .statusBarsPadding()
                 ) {
                     Row(
@@ -2146,7 +2150,7 @@ fun ReportEditorScreen(
         else -> "اجرایی"
     }
 
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by rememberSaveable(currentReport.reportType) { mutableStateOf(0) }
     val tabs = when (currentReport.reportType) {
         "LEGAL" -> listOf(
             "مشخصات پایه" to Icons.Default.Info,
@@ -2201,7 +2205,7 @@ fun ReportEditorScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.primary)
+                        .background(MaterialTheme.colorScheme.surface)
                         .statusBarsPadding()
                 ) {
                     Column {
@@ -2214,14 +2218,14 @@ fun ReportEditorScreen(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(onClick = onBack) {
-                                    Icon(Icons.Default.ArrowBack, "بازگشت", tint = MaterialTheme.colorScheme.onPrimary)
+                                    Icon(Icons.Default.ArrowBack, "بازگشت", tint = MaterialTheme.colorScheme.primary)
                                 }
                                 Column {
                                     Text(
                                         text = "ویرایش گزارش $currentUnitTitle 📝",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 15.sp,
-                                        color = MaterialTheme.colorScheme.onPrimary
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                 }
                             }
@@ -2237,7 +2241,7 @@ fun ReportEditorScreen(
                                         }
                                     }
                                 ) {
-                                    Icon(Icons.Default.Share, "اشتراک‌گذاری مستقیم", tint = MaterialTheme.colorScheme.onPrimary)
+                                    Icon(Icons.Default.Share, "اشتراک‌گذاری مستقیم", tint = MaterialTheme.colorScheme.primary)
                                 }
 
                                 // Print/Save local PDF
@@ -2250,7 +2254,7 @@ fun ReportEditorScreen(
                                         }
                                     }
                                 ) {
-                                    Icon(Icons.Default.Print, "چاپ / خروجی PDF", tint = MaterialTheme.colorScheme.onPrimary)
+                                    Icon(Icons.Default.Print, "چاپ / خروجی PDF", tint = MaterialTheme.colorScheme.primary)
                                 }
 
                                 IconButton(
@@ -2259,34 +2263,54 @@ fun ReportEditorScreen(
                                         Toast.makeText(context, "گزارش با موفقیت در دیتابیس ذخیره شد ✅", Toast.LENGTH_SHORT).show()
                                     }
                                 ) {
-                                    Icon(Icons.Default.Check, "ذخیره نهایی", tint = MaterialTheme.colorScheme.onPrimary)
+                                    Icon(Icons.Default.Check, "ذخیره نهایی", tint = MaterialTheme.colorScheme.primary)
                                 }
                             }
                         }
 
-                        ScrollableTabRow(
-                            selectedTabIndex = selectedTab,
-                            edgePadding = 8.dp,
-                            containerColor = Color.Transparent,
-                            indicator = { tabPositions ->
-                                if (selectedTab < tabPositions.size) {
-                                    TabRowDefaults.Indicator(
-                                        Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                                        color = Color.White,
-                                        height = 3.dp
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            tonalElevation = 3.dp,
+                            shadowElevation = 0.dp
+                        ) {
+                            ScrollableTabRow(
+                                selectedTabIndex = selectedTab,
+                                edgePadding = 12.dp,
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                contentColor = MaterialTheme.colorScheme.primary,
+                                divider = {},
+                                indicator = { tabPositions ->
+                                    if (selectedTab < tabPositions.size) {
+                                        TabRowDefaults.Indicator(
+                                            Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                                            color = MaterialTheme.colorScheme.primary,
+                                            height = 4.dp
+                                        )
+                                    }
+                                }
+                            ) {
+                                tabs.forEachIndexed { index, (title, icon) ->
+                                    val selected = selectedTab == index
+                                    Tab(
+                                        selected = selected,
+                                        onClick = { selectedTab = index },
+                                        icon = {
+                                            Surface(
+                                                shape = CircleShape,
+                                                color = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+                                            ) {
+                                                Icon(
+                                                    icon,
+                                                    contentDescription = title,
+                                                    modifier = Modifier.padding(6.dp).size(18.dp)
+                                                )
+                                            }
+                                        },
+                                        text = { Text(title, fontSize = 11.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                        selectedContentColor = MaterialTheme.colorScheme.primary,
+                                        unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
-                            }
-                        ) {
-                            tabs.forEachIndexed { index, (title, icon) ->
-                                Tab(
-                                    selected = selectedTab == index,
-                                    onClick = { selectedTab = index },
-                                    icon = { Icon(icon, contentDescription = title, modifier = Modifier.size(20.dp)) },
-                                    text = { Text(title, fontSize = 11.5.sp, fontWeight = FontWeight.Bold) },
-                                    selectedContentColor = Color.White,
-                                    unselectedContentColor = Color.White.copy(alpha = 0.6f)
-                                )
                             }
                         }
                     }
@@ -3209,7 +3233,7 @@ fun MainAppScreen(
 }
 
 // Helper to format YYYY-MM-DD to Jalali String
-private fun formatGregorianToJalali(dateString: String): String {
+fun formatGregorianToJalali(dateString: String): String {
     try {
         val parts = dateString.split("-")
         if (parts.size != 3) return dateString
