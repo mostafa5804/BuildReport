@@ -54,18 +54,7 @@ jobs:
       # =====================================================
       # 🔥 مرحله جدید: حذف فایل‌های تکراری و برطرف‌کننده خطا
       # =====================================================
-      - name: Fix Kotlin Compilation Errors 🛠️
-        run: |
-          echo "🔍 Removing conflicting files..."
-          # حذف فایل MainAppScreen.kt (چون نسخه جدید در dashboard/ وجود دارد)
-          rm -f app/src/main/java/com/example/ui/screens/MainAppScreen.kt
-          
-          # اگر فایل DashboardScreen.kt دارای توابع تکراری است، آنها را کامنت می‌کنیم
-          # یا می‌توانید فایل را به طور کامل با نسخه صحیح جایگزین کنید
-          
-          echo "✅ Conflict resolved."
-        continue-on-error: false
-
+      
       - name: Build Debug/Release APKs & Bundle (AAB) 🛠️
         run: gradle assembleDebug assembleRelease bundleRelease --stacktrace
         env:
