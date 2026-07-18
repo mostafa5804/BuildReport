@@ -17,8 +17,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -73,8 +75,9 @@ fun base64ToBitmap(base64Str: String): android.graphics.Bitmap? {
 
 fun uriToBase64(context: android.content.Context, uri: android.net.Uri): String? {
     return try {
-        val inputStream = context.contentResolver.openInputStream(uri)
-        val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
+        val bitmap = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            android.graphics.BitmapFactory.decodeStream(inputStream)
+        } ?: return null
         val outputStream = java.io.ByteArrayOutputStream()
         val maxDim = 600
         val resized = if (bitmap.width > maxDim || bitmap.height > maxDim) {
@@ -83,9 +86,9 @@ fun uriToBase64(context: android.content.Context, uri: android.net.Uri): String?
         } else {
             bitmap
         }
-        resized.compress(android.graphics.Bitmap.CompressFormat.PNG, 85, outputStream)
+        resized.compress(android.graphics.Bitmap.CompressFormat.JPEG, 82, outputStream)
         val byteArray = outputStream.toByteArray()
-        android.util.Base64.encodeToString(byteArray, android.util.Base64.DEFAULT)
+        android.util.Base64.encodeToString(byteArray, android.util.Base64.NO_WRAP)
     } catch (e: Exception) {
         null
     }
@@ -219,516 +222,7 @@ fun ActivityItemCard(
     }
 }
 
-// --- REDES@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ProjectDashboardTab(
-    reportsCount: Int,
-    reports: List<DailyReport>,
-    viewModel: ReportViewModel,
-    onCreateReport: (String) -> Unit,
-    onViewReportsTab: () -> Unit
-) {
-    val context = LocalContext.current
-    val backupRestored by viewModel.backupRestoredEvent.collectAsState()
-    val defaultPreparedBy = remember(backupRestored) { viewModel.sharedPreferences.getString("default_prepared_by", "") ?: "" }
-    val welcomeName = defaultPreparedBy.ifEmpty { "مهندس" }
-    val defaultReportType = remember(backupRestored) { viewModel.sharedPreferences.getString("default_report_type", "ASK") ?: "ASK" }
-    
-    var showCreateReportDialog by remember { mutableStateOf(false) }
-    
-    // Weather States
-    val weatherEnabled = remember(backupRestored) { viewModel.sharedPreferences.getBoolean("weather_enabled", true) }
-    val cityName = remember(backupRestored) { viewModel.sharedPreferences.getString("weather_city_name", "") ?: "" }
-    
-    val currentWeather by viewModel.currentWeather.collectAsStateWithLifecycle()
-    val dailyForecast by viewModel.dailyForecast.collectAsStateWithLifecycle()
-    val isWeatherLoading by viewModel.isWeatherLoading.collectAsStateWithLifecycle()
-    
-    var showForecastDialog by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        val autoUpdate = viewModel.sharedPreferences.getBoolean("weather_auto_update", true)
-        if (weatherEnabled && autoUpdate) {
-            viewModel.fetchWeatherIfNeeded(forceRefresh = false)
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-        ) {
-            // 2. Top section
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.primary)
-                    .padding(top = 48.dp, bottom = 24.dp, start = 24.dp, end = 24.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(MaterialTheme.colorScheme.onPrimary, RoundedCornerShape(12.dp))
-                        .padding(8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = androidx.compose.material.icons.Icons.Default.Engineering,
-                        contentDescription = "Logo",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Text("گزارش‌يار کارگاه", fontSize = 22.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onPrimary)
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 3. Greeting Card
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("سلام $welcomeName ", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                    Text("👋", fontSize = 18.sp)
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 4. Weather Card
-            if (weatherEnabled && cityName.isNotEmpty()) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp)
-                        .clickable { showForecastDialog = true },
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(20.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text("آب و هوای امروز", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.LocationOn, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(cityName, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                            }
-                        }
-                        
-                        if (isWeatherLoading && currentWeather == null) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
-                        } else if (currentWeather != null) {
-                            val code = dailyForecast?.weatherCode?.firstOrNull() ?: currentWeather!!.weatherCode
-                            val (wIcon, wDesc) = com.example.weather.WeatherRepository.getWeatherCodeInfo(code, currentWeather!!.isDay == 1)
-                            val minTemp = dailyForecast?.minTemp?.firstOrNull()?.toInt() ?: "-"
-                            val maxTemp = dailyForecast?.maxTemp?.firstOrNull()?.toInt() ?: "-"
-                            val rain = dailyForecast?.rainSum?.firstOrNull() ?: 0.0
-                            val wind = currentWeather!!.windSpeed
-                            
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Column(horizontalAlignment = Alignment.End) {
-                                    Text(wDesc, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                                    Text("$minTemp° / $maxTemp°", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    if (rain > 0 || wind > 10) {
-                                        val extraInfo = mutableListOf<String>()
-                                        if (rain > 0) extraInfo.add("🌧️ $rain mm")
-                                        if (wind > 10) extraInfo.add("💨 $wind km/h")
-                                        Text(extraInfo.joinToString(" | "), fontSize = 10.sp, color = MaterialTheme.colorScheme.primary)
-                                    }
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(wIcon, fontSize = 32.sp)
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            // 5. Reports Card
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("گزارش‌های ثبت شده", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text("مشاهده و مدیریت لیست گزارش‌ها", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Box(
-                        modifier = Modifier
-                            .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(12.dp))
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("$reportsCount گزارش", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                    }
-                }
-                
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                
-                TextButton(
-                    onClick = onViewReportsTab,
-                    modifier = Modifier.fillMaxWidth().padding(8.dp)
-                ) {
-                    Text("مشاهده همه گزارش‌ها", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // 6. Recent Activities
-            Text(
-                "آخرین فعالیت‌ها", 
-                fontSize = 16.sp, 
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
-            )
-            
-            if (reports.isEmpty()) {
-                Text(
-                    "هنوز هیچ فعالیتی ثبت نشده است.", 
-                    fontSize = 14.sp, 
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, 
-                    modifier = Modifier.padding(horizontal = 24.dp)
-                )
-            } else {
-                reports.take(5).forEachIndexed { index, report ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        // Timeline indicator
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(end = 16.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(12.dp)
-                                    .background(MaterialTheme.colorScheme.primary, CircleShape)
-                            )
-                            if (index < minOf(reports.size, 5) - 1) {
-                                Box(
-                                    modifier = Modifier
-                                        .width(2.dp)
-                                        .height(40.dp)
-                                        .background(MaterialTheme.colorScheme.outlineVariant)
-                                )
-                            }
-                        }
-                        
-                        Column(modifier = Modifier.weight(1f).offset(y = (-4).dp)) {
-                            Text("گزارش روزانه (${report.date})", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
-                            Text("توسط ${report.preparedBy.ifEmpty { welcomeName }} - ${report.project}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(100.dp))
-        }
-
-        // FAB
-        FloatingActionButton(
-            onClick = {
-                if (defaultReportType == "ASK" || defaultReportType.isEmpty()) {
-                    showCreateReportDialog = true
-                } else {
-                    onCreateReport(defaultReportType)
-                    Toast.makeText(context, "گزارش روزانه جدید ایجاد شد 📝", Toast.LENGTH_SHORT).show()
-                }
-            },
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 24.dp, bottom = 24.dp),
-            containerColor = Color(0xFF0F766E),
-            contentColor = Color.White,
-            shape = RoundedCornerShape(20.dp),
-            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
-        ) {
-            Icon(Icons.Default.Add, contentDescription = "ثبت گزارش جدید", modifier = Modifier.size(28.dp))
-        }
-        
-        if (showCreateReportDialog) {
-            AlertDialog(
-                onDismissRequest = { showCreateReportDialog = false },
-                title = {
-                    Text(
-                        text = "ثبت گزارش جدید روزانه 📋",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
-                    )
-                },
-                text = {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        val reportTypes = listOf(
-                            "EXECUTION" to "فعالیت‌های اجرایی 🔨",
-                            "WAREHOUSE" to "انباردار کارگاه 📦",
-                            "TECHNICAL" to "دفتر فنی کارگاه 📐",
-                            "HSE" to "ایمنی HSE 🛡️",
-                            "SURVEY" to "نقشه‌برداری کارگاه 📐",
-                            "LEGAL" to "حقوقی و تملک اراضی ⚖️",
-                            "CUSTOM" to (viewModel.sharedPreferences.getString("custom_unit_title", "سایر واحدها") ?: "سایر واحدها")
-                        )
-                        reportTypes.forEach { (type, label) ->
-                            Button(
-                                onClick = {
-                                    onCreateReport(type)
-                                    showCreateReportDialog = false
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF0F766E),
-                                    contentColor = Color.White
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text(text = label, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                },
-                confirmButton = {},
-                dismissButton = {
-                    TextButton(onClick = { showCreateReportDialog = false }) {
-                        Text("انصراف", color = Color(0xFF0F766E))
-                    }
-                }
-            )
-        }
-        
-        // 7-day forecast dialog
-        if (showForecastDialog && dailyForecast != null) {
-            AlertDialog(
-                onDismissRequest = { showForecastDialog = false },
-                title = { Text("پیش‌بینی ۷ روزه", fontWeight = FontWeight.Bold) },
-                text = {
-                    LazyColumn {
-                        items(dailyForecast!!.time.size) { i ->
-                            val (icon, desc) = com.example.weather.WeatherRepository.getWeatherCodeInfo(dailyForecast!!.weatherCode[i], true)
-                            val rain = if (dailyForecast!!.rainSum.size > i) dailyForecast!!.rainSum[i] else 0.0
-                            val uv = if (dailyForecast!!.uvIndexMax.size > i) dailyForecast!!.uvIndexMax[i] else 0.0
-
-                            Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(formatGregorianToJalali(dailyForecast!!.time[i]), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(desc, fontSize = 12.sp, modifier = Modifier.padding(end = 8.dp))
-                                        Text(icon, fontSize = 16.sp)
-                                    }
-                                    Text("${dailyForecast!!.minTemp[i].toInt()}° / ${dailyForecast!!.maxTemp[i].toInt()}°", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                }
-                                if (rain > 0 || uv > 5) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                                        horizontalArrangement = Arrangement.Start
-                                    ) {
-                                        if (rain > 0) Text("🌧️ بارش: $rain mm", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(end = 8.dp))
-                                        if (uv > 5) Text("☀️ UV: $uv", fontSize = 10.sp, color = MaterialTheme.colorScheme.error)
-                                    }
-                                }
-                            }
-                            if (i < dailyForecast!!.time.size - 1) {
-                                HorizontalDivider()
-                            }
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { showForecastDialog = false }) {
-                        Text("بستن")
-                    }
-                }
-            )
-        }
-    }
-}
-
-// KPI Dashboard Card
-@Composable
-fun DashboardKpiCard(
-    title: String,
-    value: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    colorAccent: Color,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(colorAccent.copy(alpha = 0.1f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(imageVector = icon, contentDescription = null, tint = colorAccent, modifier = Modifier.size(20.dp))
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = title,
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = value,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 18.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
-    }
-}
-
-// Canvas report distribution chart
-@Composable
-fun ReportCategoryChart(reports: List<DailyReport>, customUnitTitle: String) {
-    val categories = listOf(
-        Triple("EXECUTION", "اجرا", Color(0xFF00695C)),
-        Triple("WAREHOUSE", "انبار", Color(0xFF00A884)),
-        Triple("TECHNICAL", "دفتر فنی", Color(0xFF3B82F6)),
-        Triple("LEGAL", "حقوقی", Color(0xFF8B5CF6)),
-        Triple("SURVEY", "نقشه", Color(0xFFEC4899)),
-        Triple("HSE", "ایمنی", Color(0xFFEF4444)),
-        Triple("CUSTOM", customUnitTitle.take(5), Color(0xFFF59E0B))
-    )
-    
-    val counts = categories.map { (key, _, _) ->
-        reports.count { it.reportType == key || (key == "EXECUTION" && it.reportType.isEmpty()) }
-    }
-    
-    val maxCount = counts.maxOrNull()?.coerceAtLeast(1) ?: 1
-    
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .background(MaterialTheme.colorScheme.primary, CircleShape)
-                )
-                Text(
-                    text = "توزیع موضوعی گزارش‌های ثبت‌شده 📊",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-            
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(130.dp)
-                    .padding(top = 10.dp),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.Bottom
-            ) {
-                categories.forEachIndexed { index, (_, label, color) ->
-                    val count = counts[index]
-                    val heightRatio = count.toFloat() / maxCount
-                    
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(
-                            text = count.toString(),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = color
-                        )
-                        
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight(heightRatio.coerceAtLeast(0.08f))
-                                .width(14.dp)
-                                .background(
-                                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                                        colors = listOf(color, color.copy(alpha = 0.4f))
-                                    ),
-                                    shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)
-                                )
-                        )
-                        
-                        Text(
-                            text = label,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
+// Dashboard screen moved to dashboard/DashboardScreen.kt for better feature modularity.
 
 // --- REDESIGNED SCREEN 2: SETTINGS (with Expandable Group Cards) ---
 @Composable
@@ -904,7 +398,7 @@ fun ProjectSettingsTab(
                 ) {
                     Text(
                         text = "تنظیمات پیش‌فرض کارگاه",
-                        color = MaterialTheme.colorScheme.onPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp
                     )
@@ -1888,7 +1382,7 @@ fun ReportListScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.primary)
+                        .background(MaterialTheme.colorScheme.surface)
                         .statusBarsPadding()
                 ) {
                     Row(
@@ -2225,7 +1719,7 @@ fun ReportEditorScreen(
         else -> "اجرایی"
     }
 
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by rememberSaveable(currentReport.reportType) { mutableStateOf(0) }
     val tabs = when (currentReport.reportType) {
         "LEGAL" -> listOf(
             "مشخصات پایه" to Icons.Default.Info,
@@ -2280,7 +1774,7 @@ fun ReportEditorScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.primary)
+                        .background(MaterialTheme.colorScheme.surface)
                         .statusBarsPadding()
                 ) {
                     Column {
@@ -2293,14 +1787,14 @@ fun ReportEditorScreen(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(onClick = onBack) {
-                                    Icon(Icons.Default.ArrowBack, "بازگشت", tint = MaterialTheme.colorScheme.onPrimary)
+                                    Icon(Icons.Default.ArrowBack, "بازگشت", tint = MaterialTheme.colorScheme.primary)
                                 }
                                 Column {
                                     Text(
                                         text = "ویرایش گزارش $currentUnitTitle 📝",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 15.sp,
-                                        color = MaterialTheme.colorScheme.onPrimary
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                 }
                             }
@@ -2316,7 +1810,7 @@ fun ReportEditorScreen(
                                         }
                                     }
                                 ) {
-                                    Icon(Icons.Default.Share, "اشتراک‌گذاری مستقیم", tint = MaterialTheme.colorScheme.onPrimary)
+                                    Icon(Icons.Default.Share, "اشتراک‌گذاری مستقیم", tint = MaterialTheme.colorScheme.primary)
                                 }
 
                                 // Print/Save local PDF
@@ -2329,7 +1823,7 @@ fun ReportEditorScreen(
                                         }
                                     }
                                 ) {
-                                    Icon(Icons.Default.Print, "چاپ / خروجی PDF", tint = MaterialTheme.colorScheme.onPrimary)
+                                    Icon(Icons.Default.Print, "چاپ / خروجی PDF", tint = MaterialTheme.colorScheme.primary)
                                 }
 
                                 IconButton(
@@ -2338,34 +1832,54 @@ fun ReportEditorScreen(
                                         Toast.makeText(context, "گزارش با موفقیت در دیتابیس ذخیره شد ✅", Toast.LENGTH_SHORT).show()
                                     }
                                 ) {
-                                    Icon(Icons.Default.Check, "ذخیره نهایی", tint = MaterialTheme.colorScheme.onPrimary)
+                                    Icon(Icons.Default.Check, "ذخیره نهایی", tint = MaterialTheme.colorScheme.primary)
                                 }
                             }
                         }
 
-                        ScrollableTabRow(
-                            selectedTabIndex = selectedTab,
-                            edgePadding = 8.dp,
-                            containerColor = Color.Transparent,
-                            indicator = { tabPositions ->
-                                if (selectedTab < tabPositions.size) {
-                                    TabRowDefaults.Indicator(
-                                        Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                                        color = Color.White,
-                                        height = 3.dp
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            tonalElevation = 3.dp,
+                            shadowElevation = 0.dp
+                        ) {
+                            ScrollableTabRow(
+                                selectedTabIndex = selectedTab,
+                                edgePadding = 12.dp,
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                contentColor = MaterialTheme.colorScheme.primary,
+                                divider = {},
+                                indicator = { tabPositions ->
+                                    if (selectedTab < tabPositions.size) {
+                                        TabRowDefaults.Indicator(
+                                            Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                                            color = MaterialTheme.colorScheme.primary,
+                                            height = 4.dp
+                                        )
+                                    }
+                                }
+                            ) {
+                                tabs.forEachIndexed { index, (title, icon) ->
+                                    val selected = selectedTab == index
+                                    Tab(
+                                        selected = selected,
+                                        onClick = { selectedTab = index },
+                                        icon = {
+                                            Surface(
+                                                shape = CircleShape,
+                                                color = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+                                            ) {
+                                                Icon(
+                                                    icon,
+                                                    contentDescription = title,
+                                                    modifier = Modifier.padding(6.dp).size(18.dp)
+                                                )
+                                            }
+                                        },
+                                        text = { Text(title, fontSize = 11.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                        selectedContentColor = MaterialTheme.colorScheme.primary,
+                                        unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
-                            }
-                        ) {
-                            tabs.forEachIndexed { index, (title, icon) ->
-                                Tab(
-                                    selected = selectedTab == index,
-                                    onClick = { selectedTab = index },
-                                    icon = { Icon(icon, contentDescription = title, modifier = Modifier.size(20.dp)) },
-                                    text = { Text(title, fontSize = 11.5.sp, fontWeight = FontWeight.Bold) },
-                                    selectedContentColor = Color.White,
-                                    unselectedContentColor = Color.White.copy(alpha = 0.6f)
-                                )
                             }
                         }
                     }
@@ -3288,7 +2802,7 @@ fun MainAppScreen(
 }
 
 // Helper to format YYYY-MM-DD to Jalali String
-private fun formatGregorianToJalali(dateString: String): String {
+fun formatGregorianToJalali(dateString: String): String {
     try {
         val parts = dateString.split("-")
         if (parts.size != 3) return dateString
