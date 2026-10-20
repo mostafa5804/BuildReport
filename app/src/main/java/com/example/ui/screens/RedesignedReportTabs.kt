@@ -341,7 +341,7 @@ fun BaseInfoTabRedesigned(
                     )
                 }
                 Text(
-                    text = "پروژه: ${report.projectTitle.ifBlank { "پروژه عمرانی" }}",
+                    text = "پروژه: ${report.project.ifBlank { "پروژه عمرانی" }}",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -351,7 +351,7 @@ fun BaseInfoTabRedesigned(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "واحد گزارش‌دهنده: $unitLabel (${report.sectionName.ifBlank { unitLabel }})",
+                        text = "واحد گزارش‌دهنده: $unitLabel (${report.section.ifBlank { unitLabel }})",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

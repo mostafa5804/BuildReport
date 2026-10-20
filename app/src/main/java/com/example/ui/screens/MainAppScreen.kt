@@ -1382,7 +1382,14 @@ fun ProjectSettingsTab(
                 // Bottom Full-width save button
                 Button(
                     onClick = {
-                        val parsedBaseNum = normalizeDigits(baseReportNumber).toIntOrNull() ?: 100
+                        val normalizedNumStr = baseReportNumber.map { ch ->
+                            when (ch) {
+                                in '۰'..'۹' -> '0' + (ch - '۰')
+                                in '٠'..'٩' -> '0' + (ch - '٠')
+                                else -> ch
+                            }
+                        }.joinToString("").trim()
+                        val parsedBaseNum = normalizedNumStr.toIntOrNull() ?: 100
                         viewModel.sharedPreferences.edit()
                             .putString("default_project", defaultProject)
                             .putString("default_section", defaultSection)

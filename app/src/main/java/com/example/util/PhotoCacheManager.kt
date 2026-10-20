@@ -36,7 +36,8 @@ object PhotoCacheManager {
         projectTitle: String = "",
         reportDate: String = "",
         reportNumber: Int = 100,
-        kmInfo: String = ""
+        kmInfo: String = "",
+        applyWatermark: Boolean = true
     ): String? {
         try {
             val storageDir = getCacheDir(context)
@@ -69,13 +70,17 @@ object PhotoCacheManager {
             }
 
             // Apply automatic Construction Site Watermark (واترمارک کارگاهی)
-            val watermarkedBitmap = applySiteWatermark(
-                bitmap = scaledBitmap,
-                projectTitle = projectTitle,
-                reportDate = reportDate,
-                reportNumber = reportNumber,
-                kmInfo = kmInfo
-            )
+            val watermarkedBitmap = if (applyWatermark) {
+                applySiteWatermark(
+                    bitmap = scaledBitmap,
+                    projectTitle = projectTitle,
+                    reportDate = reportDate,
+                    reportNumber = reportNumber,
+                    kmInfo = kmInfo
+                )
+            } else {
+                scaledBitmap
+            }
 
             val fileName = "photo_${System.currentTimeMillis()}_${UUID.randomUUID().toString().take(6)}.jpg"
             val file = File(storageDir, fileName)
