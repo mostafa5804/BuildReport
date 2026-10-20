@@ -711,6 +711,8 @@ object PdfGenerator {
             }
         }
 
+        val obstaclesSectionNumber = if (rType == "SURVEY") "۴" else "۵"
+
         return """
             <!DOCTYPE html>
             <html lang="fa" dir="rtl">
@@ -720,7 +722,8 @@ object PdfGenerator {
                 <style>
                     @font-face {
                         font-family: 'Vazir';
-                        src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Regular.woff2') format('woff2');
+                        src: url('font/vazirmatn.ttf') format('truetype'),
+                             url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Regular.woff2') format('woff2');
                     }
                     * {
                         box-sizing: border-box;
@@ -1011,17 +1014,18 @@ object PdfGenerator {
             </head>
             <body>
                 <div class="header-container">
-                    <div class="main-title">$mainReportTitle</div>
+                    <div class="main-title">$mainReportTitle (شماره گزارش: #${report.reportNumber})</div>
                     <table class="meta-grid">
                         <tr>
-                            <td style="width: 40%"><strong>نام پروژه:</strong> ${report.project.ifEmpty { "ثبت نشده" }}</td>
-                            <td style="width: 30%"><strong>واحد/بخش مربوطه:</strong> ${report.section.ifEmpty { "بخش فنی" }}</td>
-                            <td style="width: 30%"><strong>تاریخ گزارش:</strong> ${report.date.ifEmpty { "ثبت نشده" }}</td>
+                            <td style="width: 36%"><strong>نام پروژه:</strong> ${report.project.ifEmpty { "ثبت نشده" }}</td>
+                            <td style="width: 24%"><strong>واحد/بخش:</strong> ${report.section.ifEmpty { "بخش فنی" }}</td>
+                            <td style="width: 20%"><strong>شماره گزارش:</strong> #${report.reportNumber}</td>
+                            <td style="width: 20%"><strong>تاریخ گزارش:</strong> ${report.date.ifEmpty { "ثبت نشده" }}</td>
                         </tr>
                         <tr>
                             <td><strong>تهیه کننده گزارش:</strong> ${report.preparedBy.ifEmpty { "ثبت نشده" }}</td>
                             <td><strong>وضعیت جوی هوا:</strong> ${report.weather.ifEmpty { "آفتابی ☀️" }}</td>
-                            <td>
+                            <td colspan="2">
                                 <strong>محدوده کیلومتراژ:</strong> 
                                 ${if (report.startKm.isEmpty() && report.endKm.isEmpty()) "عمومی کارگاه" else "کیلومتر " + formatKmRangeHtml(report.startKm, report.endKm)}
                             </td>
@@ -1031,8 +1035,8 @@ object PdfGenerator {
 
                 $bodyContentHtml
 
-                <!-- 4. موانع و مشکلات -->
-                <div class="section-title">۳. موانع، مشکلات کارگاهی و پیش‌بینی روز آینده</div>
+                <!-- موانع و مشکلات -->
+                <div class="section-title">$obstaclesSectionNumber. موانع، مشکلات کارگاهی و پیش‌بینی روز آینده</div>
                 <div class="memo-container">
                     <div class="memo-box">
                         <div class="memo-title">⚠️ موانع، مشکلات، نواقص و حوادث کارگاهی:</div>
@@ -1082,10 +1086,11 @@ object PdfGenerator {
             // Header for Photo Page
             pageHtml.append("""
                 <div class="header-container" style="margin-bottom: 20px; flex-shrink: 0;">
-                    <div class="main-title">پیوست تصاویر گزارش روزانه</div>
+                    <div class="main-title">پیوست تصاویر گزارش روزانه (شماره #${report.reportNumber})</div>
                     <table class="meta-grid">
                         <tr>
                             <td><strong>پروژه:</strong> ${report.project.ifEmpty { "---" }}</td>
+                            <td><strong>واحد:</strong> ${report.section.ifEmpty { "---" }}</td>
                             <td><strong>تاریخ:</strong> ${report.date.ifEmpty { "---" }}</td>
                         </tr>
                     </table>

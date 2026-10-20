@@ -1,0 +1,2022 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>گزارش روزانه کارگاه — نسخه 3.1.0 (نسخه موبایل اندروید)</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" />
+  <style>
+    :root {
+      --bg-outer: #0b1120;
+      --app-bg: #f1f5f9;
+      --surface: #ffffff;
+      --surface-2: #f8fafc;
+      --surface-3: #e2e8f0;
+      --text-main: #0f172a;
+      --text-sub: #475569;
+      --text-muted: #94a3b8;
+      --border: #e2e8f0;
+
+      --primary: #1d4ed8;
+      --primary-dark: #1e3a8a;
+      --primary-light: #dbeafe;
+      --accent: #d97706;
+      --accent-light: #fef3c7;
+      --success: #059669;
+      --success-light: #d1fae5;
+      --danger: #dc2626;
+      --danger-light: #fee2e2;
+      --purple: #7c3aed;
+      --purple-light: #ede9fe;
+      --teal: #0d9488;
+      --teal-light: #ccfbf1;
+
+      --radius-sm: 10px;
+      --radius-md: 16px;
+      --radius-lg: 22px;
+      --shadow-card: 0 2px 8px rgba(15, 23, 42, 0.06);
+      --shadow-float: 0 8px 24px rgba(29, 78, 216, 0.28);
+    }
+
+    [data-theme="dark"] {
+      --app-bg: #090d16;
+      --surface: #131c2e;
+      --surface-2: #1c273d;
+      --surface-3: #28354f;
+      --text-main: #f8fafc;
+      --text-sub: #cbd5e1;
+      --text-muted: #64748b;
+      --border: #1e293b;
+
+      --primary: #3b82f6;
+      --primary-dark: #1d4ed8;
+      --primary-light: rgba(59, 130, 246, 0.16);
+      --accent: #f59e0b;
+      --accent-light: rgba(245, 158, 11, 0.16);
+      --success: #10b981;
+      --success-light: rgba(16, 185, 129, 0.16);
+      --danger: #ef4444;
+      --danger-light: rgba(239, 68, 68, 0.16);
+      --purple: #a78bfa;
+      --purple-light: rgba(167, 139, 250, 0.16);
+      --teal: #2dd4bf;
+      --teal-light: rgba(45, 212, 191, 0.16);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Vazirmatn', 'Tahoma', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: radial-gradient(circle at 50% 15%, #1e293b 0%, #090d16 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 0;
+      color: var(--text-main);
+      direction: rtl;
+      user-select: none;
+    }
+
+    .preview-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 6px 14px;
+      border-radius: 999px;
+      color: #e2e8f0;
+      font-size: 11.5px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .preview-toolbar .badge-apk {
+      background: #10b981;
+      color: #052e16;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 11px;
+    }
+
+    .preview-toolbar button {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 99px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .phone-frame {
+      width: 412px;
+      height: 880px;
+      background: var(--app-bg);
+      border-radius: 46px;
+      border: 11px solid #1e293b;
+      box-shadow: 0 0 0 2px #334155, 0 30px 70px rgba(0, 0, 0, 0.65);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .camera-hole {
+      width: 14px;
+      height: 14px;
+      background: #000;
+      border-radius: 50%;
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+    }
+
+    .android-status-bar {
+      height: 34px;
+      background: var(--surface);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 22px 0;
+      font-size: 11.5px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .status-icons {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      direction: ltr;
+      font-size: 11px;
+    }
+
+    .top-app-bar {
+      background: var(--surface);
+      padding: 8px 14px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .app-title-group {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .app-logo-box {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .app-title-text h1 {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .app-title-text p {
+      font-size: 10.5px;
+      color: var(--text-sub);
+      margin-top: 1px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .icon-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    .mobile-content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 12px 12px 92px;
+    }
+
+    .mobile-content::-webkit-scrollbar { width: 3px; }
+    .mobile-content::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 4px; }
+
+    .screen-page { display: none; animation: fadeSlideUp 0.18s ease-out; }
+    .screen-page.active { display: block; }
+
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero-card {
+      background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 60%, #0f172a 100%);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 8px 20px rgba(29, 78, 216, 0.25);
+      margin-bottom: 12px;
+    }
+
+    .hero-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .date-badge {
+      background: rgba(255, 255, 255, 0.16);
+      padding: 4px 10px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .weather-pill {
+      background: rgba(15, 23, 42, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 4px 9px;
+      border-radius: 99px;
+      font-size: 10.5px;
+      cursor: pointer;
+    }
+
+    .hero-project-title {
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 3px;
+    }
+
+    .hero-project-sub {
+      font-size: 11px;
+      color: #cbd5e1;
+      margin-bottom: 12px;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-hero-primary {
+      flex: 1;
+      background: #f59e0b;
+      color: #0f172a;
+      border: none;
+      border-radius: 11px;
+      padding: 9px 12px;
+      font-size: 12px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      cursor: pointer;
+    }
+
+    .btn-hero-secondary {
+      background: rgba(255, 255, 255, 0.16);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 11px;
+      padding: 9px 11px;
+      font-size: 11.5px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 12px 2px 7px;
+    }
+
+    .section-head h2 {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .section-head span.link {
+      font-size: 11px;
+      color: var(--primary);
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .kpi-grid-mobile {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .kpi-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 11px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .kpi-box-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+
+    .kpi-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .kpi-trend {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 99px;
+    }
+
+    .kpi-val {
+      font-size: 16px;
+      font-weight: 900;
+      color: var(--text-main);
+    }
+
+    .kpi-lbl {
+      font-size: 10.5px;
+      color: var(--text-sub);
+    }
+
+    .sync-card, .form-card, .report-item-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      margin-bottom: 10px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .sync-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: var(--surface-2);
+      margin-top: 7px;
+    }
+
+    .sync-info { display: flex; align-items: center; gap: 8px; }
+    .status-dot { width: 9px; height: 9px; border-radius: 50%; }
+    .sync-title { font-size: 11.5px; font-weight: 800; }
+    .sync-sub { font-size: 10px; color: var(--text-sub); }
+
+    .btn-mini {
+      border: none;
+      padding: 4px 8px;
+      border-radius: 7px;
+      font-size: 10.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .report-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .unit-tag {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 7px;
+      border-radius: 7px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .report-title { font-size: 12.5px; font-weight: 800; margin-bottom: 3px; }
+    .report-meta { font-size: 10.5px; color: var(--text-sub); margin-bottom: 8px; }
+
+    .report-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      padding-top: 8px;
+      border-top: 1px dashed var(--border);
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .pill-group { display: flex; gap: 4px; flex-wrap: wrap; }
+    .stat-pill {
+      background: var(--surface-2);
+      color: var(--text-sub);
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    /* ۶ تب صفحه ثبت گزارش به صورت شبکه ۳×۲ کاملاً قابل دید بدون نیاز به اسکرول مخفی */
+    .compose-tabs-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .compose-tab {
+      padding: 7px 6px;
+      border-radius: 10px;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--text-sub);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .compose-tab.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      box-shadow: 0 3px 8px rgba(29, 78, 216, 0.25);
+    }
+
+    .compose-tab .cnt {
+      background: rgba(255, 255, 255, 0.24);
+      padding: 0 5px;
+      border-radius: 99px;
+      font-size: 9.5px;
+    }
+
+    .editor-step-pane { display: none; }
+    .editor-step-pane.active { display: block; animation: fadeSlideUp 0.15s ease-out; }
+
+    /* نوار خلاصه مشخصات ثابت پروژه (خوانده‌شده از تنظیمات) */
+    .fixed-profile-banner {
+      background: var(--primary-light);
+      border: 1px solid rgba(29, 78, 216, 0.25);
+      border-radius: 12px;
+      padding: 8px 10px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10.5px;
+    }
+
+    .form-card-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .field-group { margin-bottom: 9px; }
+    .field-group:last-child { margin-bottom: 0; }
+
+    .field-label {
+      display: block;
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--text-sub);
+      margin-bottom: 3px;
+    }
+
+    .field-input, .field-select, .field-textarea {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 12px;
+      color: var(--text-main);
+      outline: none;
+    }
+
+    .field-input:focus, .field-select:focus, .field-textarea:focus {
+      border-color: var(--primary);
+      background: var(--surface);
+    }
+
+    .row-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .row-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
+
+    .km-input {
+      direction: ltr;
+      text-align: center;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    .km-badge-result {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-size: 11px;
+      font-weight: 800;
+      padding: 6px 10px;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 6px;
+    }
+
+    /* دکمه‌های کنترلی هر ردیف: جابجایی بالا/پایین، ویرایش، حذف */
+    .item-ctrl-bar {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .ctrl-btn {
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text-main);
+      border-radius: 6px;
+      padding: 3px 6px;
+      font-size: 10.5px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .ctrl-btn:hover { background: var(--surface-3); }
+    .ctrl-btn.edit { background: var(--primary-light); color: var(--primary); border-color: transparent; }
+    .ctrl-btn.del { background: var(--danger-light); color: var(--danger); border-color: transparent; }
+
+    .bottom-nav-bar {
+      height: 66px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      align-items: center;
+      padding: 4px 8px 10px;
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      z-index: 50;
+    }
+
+    .nav-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+
+    .nav-pill {
+      width: 46px;
+      height: 26px;
+      border-radius: 99px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .nav-tab.active { color: var(--primary); }
+    .nav-tab.active .nav-pill { background: var(--primary-light); }
+    .nav-label { font-size: 10px; font-weight: 700; }
+
+    .gesture-bar {
+      width: 110px; height: 4px;
+      background: var(--text-muted); opacity: 0.35;
+      border-radius: 99px;
+      position: absolute; bottom: 4px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 60;
+    }
+
+    .android-fab {
+      position: absolute;
+      bottom: 78px;
+      left: 16px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff;
+      border: none;
+      border-radius: 15px;
+      padding: 10px 14px;
+      font-size: 11.5px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      box-shadow: var(--shadow-float);
+      cursor: pointer;
+      z-index: 45;
+    }
+
+    .sheet-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(9, 13, 22, 0.6);
+      z-index: 80;
+      display: none;
+      align-items: flex-end;
+    }
+    .sheet-backdrop.open { display: flex; }
+
+    .bottom-sheet {
+      width: 100%;
+      max-height: 82%;
+      background: var(--surface);
+      border-radius: 22px 22px 0 0;
+      padding: 12px 15px 22px;
+      overflow-y: auto;
+    }
+
+    .sheet-handle {
+      width: 38px; height: 4px;
+      background: var(--surface-3);
+      border-radius: 99px;
+      margin: 0 auto 10px;
+    }
+
+    .android-toast {
+      position: absolute;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.94);
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 700;
+      z-index: 95;
+      white-space: nowrap;
+      display: none;
+    }
+
+    .sig-pad {
+      width: 100%;
+      height: 100px;
+      background: #fff;
+      border: 1.5px dashed #94a3b8;
+      border-radius: 10px;
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    .photo-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .photo-slot {
+      height: 90px;
+      border-radius: 11px;
+      border: 1.5px dashed var(--border);
+      background: var(--surface-2);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      font-size: 10.5px;
+      color: var(--text-sub);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .photo-slot.filled {
+      border-style: solid;
+      border-color: var(--primary);
+      background: linear-gradient(135deg, #1e293b, #334155);
+      color: #fff;
+    }
+
+    .photo-watermark {
+      position: absolute;
+      bottom: 0; right: 0; left: 0;
+      background: rgba(0, 0, 0, 0.72);
+      color: #fbbf24;
+      font-size: 9px;
+      padding: 2px 5px;
+      direction: ltr;
+      text-align: left;
+      font-family: monospace;
+    }
+
+    .h-scroll-row {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      margin-bottom: 10px;
+    }
+
+    .unit-chip {
+      flex-shrink: 0;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 11px;
+      padding: 6px 10px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .unit-chip.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+
+    @media (max-width: 480px) {
+      body { padding: 0; background: var(--app-bg); }
+      .preview-toolbar, .camera-hole { display: none !important; }
+      .phone-frame { width: 100vw; height: 100vh; border: none; border-radius: 0; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- نوار ابزار بالای قاب گوشی -->
+  <div class="preview-toolbar">
+    <span class="badge-apk">APK اندروید • نسخه 3.1.0</span>
+    <button onclick="openLogoSheet()" style="background: #f59e0b; color: #0f172a; font-weight: 800;">🎨 آیکن و لوگوی جدید</button>
+    <button onclick="switchNav('settings')" style="background: #3b82f6; font-weight: 700;">⚙️ تنظیمات ثابت پروژه</button>
+    <button onclick="toggleTheme()">🌓 تم شب/روز</button>
+    <button onclick="openPdfSheet()">📄 پیش‌نمایش PDF</button>
+  </div>
+
+  <!-- نماد SVG لوگوی اختصاصی نسخه 3.1.0 -->
+  <svg style="display: none;">
+    <symbol id="buildreport-logo" viewBox="0 0 512 512">
+      <defs>
+        <linearGradient id="bgG" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#1E3A8A" />
+          <stop offset="55%" stop-color="#0F172A" />
+          <stop offset="100%" stop-color="#090D16" />
+        </linearGradient>
+        <linearGradient id="boardG" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#F8FAFC" />
+          <stop offset="100%" stop-color="#E2E8F0" />
+        </linearGradient>
+        <linearGradient id="helmetG" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#FDE047" />
+          <stop offset="45%" stop-color="#F59E0B" />
+          <stop offset="100%" stop-color="#B45309" />
+        </linearGradient>
+        <linearGradient id="checkG" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#34D399" />
+          <stop offset="100%" stop-color="#059669" />
+        </linearGradient>
+      </defs>
+      <rect x="16" y="16" width="480" height="480" rx="112" fill="url(#bgG)" />
+      <g stroke="#3B82F6" stroke-opacity="0.14" stroke-width="3">
+        <line x1="128" y1="16" x2="128" y2="496" /><line x1="256" y1="16" x2="256" y2="496" /><line x1="384" y1="16" x2="384" y2="496" />
+        <line x1="16" y1="128" x2="496" y2="128" /><line x1="16" y1="256" x2="496" y2="256" /><line x1="16" y1="384" x2="496" y2="384" />
+      </g>
+      <rect x="28" y="28" width="456" height="456" rx="100" fill="none" stroke="#F59E0B" stroke-opacity="0.28" stroke-width="3" />
+      <rect x="108" y="88" width="248" height="316" rx="28" fill="url(#boardG)" stroke="#CBD5E1" stroke-width="3" />
+      <path d="M108 116 C108 100.5 120.5 88 136 88 H328 C343.5 88 356 100.5 356 116 V148 H108 Z" fill="#1D4ED8" />
+      <rect x="184" y="68" width="96" height="34" rx="12" fill="#475569" stroke="#94A3B8" stroke-width="3" />
+      <circle cx="232" cy="85" r="6" fill="#E2E8F0" />
+      <rect x="136" y="174" width="20" height="20" rx="6" fill="#10B981" />
+      <rect x="168" y="178" width="144" height="12" rx="6" fill="#1E293B" />
+      <rect x="136" y="210" width="20" height="20" rx="6" fill="#3B82F6" />
+      <rect x="168" y="214" width="112" height="12" rx="6" fill="#64748B" />
+      <rect x="140" y="286" width="22" height="44" rx="5" fill="#93C5FD" />
+      <rect x="172" y="268" width="22" height="62" rx="5" fill="#3B82F6" />
+      <rect x="204" y="250" width="22" height="80" rx="5" fill="#1D4ED8" />
+      <rect x="236" y="236" width="22" height="94" rx="5" fill="#10B981" />
+      <rect x="108" y="148" width="14" height="256" fill="#F59E0B" />
+      <circle cx="352" cy="144" r="42" fill="url(#checkG)" stroke="#FFFFFF" stroke-width="6" />
+      <path d="M333 144 L346 157 L373 130" fill="none" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M188 378 C188 296 244 242 314 242 C384 242 440 296 440 378 Z" fill="url(#helmetG)" />
+      <path d="M196 352 Q314 334 432 352 L435 366 Q314 348 193 366 Z" fill="#FFFBEB" opacity="0.9" />
+      <path d="M294 243 C294 230 302 224 314 224 C326 224 334 230 334 243 L328 352 H300 Z" fill="#FEF08A" opacity="0.85" />
+      <rect x="168" y="372" width="292" height="24" rx="12" fill="#FBBF24" stroke="#B45309" stroke-width="3" />
+    </symbol>
+  </svg>
+
+  <!-- قاب گوشی هوشمند اندرویدی -->
+  <div class="phone-frame">
+    <div class="camera-hole"></div>
+
+    <!-- نوار وضعیت اندروید -->
+    <div class="android-status-bar">
+      <span>۱۴:۴۵</span>
+      <div class="status-icons">
+        <span>5G</span><span>📶</span><span>🔋 ۹۴٪</span>
+      </div>
+    </div>
+
+    <!-- هدر بالایی اپلیکیشن -->
+    <header class="top-app-bar">
+      <div class="app-title-group">
+        <div class="app-logo-box" onclick="openLogoSheet()" title="مشاهده لوگوی جدید برنامه">
+          <svg width="38" height="38"><use href="#buildreport-logo"></use></svg>
+        </div>
+        <div class="app-title-text">
+          <h1 id="topBarTitle">گزارش روزانه کارگاه</h1>
+          <p><span id="activeUnitBadge">واحد اجرایی</span> • <span id="topBarReportNo">شماره گزارش: ۱۰۴</span></p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" title="لوگوی جدید" onclick="openLogoSheet()">🎨</button>
+        <button class="icon-btn" title="پیش‌نمایش چاپ PDF" onclick="openPdfSheet()">🖨️</button>
+        <button class="icon-btn" title="تم تاریک / روشن" onclick="toggleTheme()" id="themeBtn">🌙</button>
+      </div>
+    </header>
+
+    <!-- محتوای اصلی قابل اسکرول -->
+    <main class="mobile-content" id="mobileViewport">
+
+      <!-- =========================================================
+           صفحه ۱: داشبورد موبایل (HOME / DASHBOARD)
+           ========================================================= -->
+      <section class="screen-page active" id="page-dashboard">
+        <div class="hero-card">
+          <div class="hero-top">
+            <span class="date-badge">📅 سه‌شنبه ۲۷ مهر ۱۴۰۵ • گزارش #۱۰۴</span>
+            <span class="weather-pill" onclick="refreshWeather()" id="weatherWidget">☀️ ۲۴°C صاف 🔄</span>
+          </div>
+          <div class="hero-project-title" id="dashProjectName">پروژه احداث خط انتقال آب و ابنیه فنی — قطعه ۲</div>
+          <div class="hero-project-sub" id="dashAuthorSub">👷 واحد اجرایی • سرپرست: مهندس مصطفی رضایی (تنظیم‌شده در بخش تنظیمات)</div>
+          <div class="hero-actions">
+            <button class="btn-hero-primary" onclick="switchNav('editor')">✍️ ثبت / ویرایش گزارش امروز</button>
+            <button class="btn-hero-secondary" onclick="copyFromYesterday()">⚡ کپی هوشمند از دیروز</button>
+          </div>
+        </div>
+
+        <!-- کارت همگام‌سازی هوشمند ۲ روز اخیر -->
+        <div class="sync-card">
+          <div class="form-card-title" style="margin-bottom: 4px;">
+            <span>🔄 وضعیت ۲ روز اخیر کارگاه</span>
+            <span style="font-size: 10.5px; color: var(--primary); cursor: pointer;" onclick="copyFromYesterday()">⚡ کپی از دیروز</span>
+          </div>
+          <div class="sync-row">
+            <div class="sync-info">
+              <span class="status-dot" style="background: #f59e0b;"></span>
+              <div>
+                <div class="sync-title">امروز (۱۴۰۵/۰۷/۲۷) — گزارش شماره ۱۰۴</div>
+                <div class="sync-sub">۲ فعالیت • ۲۶ نفر نیرو • ۳ دستگاه • ۲ عکس واترمارک‌دار</div>
+              </div>
+            </div>
+            <button class="btn-mini" style="background: var(--primary-light); color: var(--primary);" onclick="switchNav('editor')">ادامه ثبت</button>
+          </div>
+          <div class="sync-row">
+            <div class="sync-info">
+              <span class="status-dot" style="background: #10b981;"></span>
+              <div>
+                <div class="sync-title">دیروز (۱۴۰۵/۰۷/۲۶) — گزارش شماره ۱۰۳</div>
+                <div class="sync-sub">۴ فعالیت • ۲۸ نفر نیرو • ۸ دستگاه • امضای ثابت پیوست شد</div>
+              </div>
+            </div>
+            <button class="btn-mini" style="background: var(--success-light); color: var(--success);" onclick="openPdfSheet()">PDF 📄</button>
+          </div>
+        </div>
+
+        <div class="section-head">
+          <h2>📊 خلاصه آمار ماه جاری</h2>
+          <span class="link" onclick="switchNav('settings')">ویرایش مشخصات ثابت پروژه ⚙️</span>
+        </div>
+        <div class="kpi-grid-mobile">
+          <div class="kpi-box">
+            <div class="kpi-box-top">
+              <div class="kpi-icon" style="background: var(--primary-light); color: var(--primary);">🔢</div>
+              <span class="kpi-trend" style="background: var(--success-light); color: var(--success);">شروع از ۱۰۰</span>
+            </div>
+            <div class="kpi-val" id="kpiCurrentNumber">گزارش #۱۰۴</div>
+            <div class="kpi-lbl">شمارنده اتوماتیک گزارش</div>
+          </div>
+          <div class="kpi-box">
+            <div class="kpi-box-top">
+              <div class="kpi-icon" style="background: var(--accent-light); color: var(--accent);">👷</div>
+              <span class="kpi-trend" style="background: var(--accent-light); color: var(--accent);">امروز: ۲۶ نفر</span>
+            </div>
+            <div class="kpi-val">۷۰۲ نفر-روز</div>
+            <div class="kpi-lbl">کارکرد نیروی انسانی</div>
+          </div>
+        </div>
+
+        <div class="section-head">
+          <h2>🗂️ آخرین گزارش‌های ثبت‌شده</h2>
+          <span class="link" onclick="switchNav('archive')">همه گزارش‌ها ←</span>
+        </div>
+        <div class="report-item-card" onclick="openPdfSheet()">
+          <div class="report-card-top">
+            <span class="unit-tag" style="background: var(--primary-light); color: var(--primary);">👷 واحد اجرایی • #۱۰۳</span>
+            <span style="font-size: 11.5px; font-weight: 800;">۱۴۰۵/۰۷/۲۶</span>
+          </div>
+          <div class="report-title">خاکبرداری ترانشه و لوله‌گذاری چدن داکتیل قطر ۶۰۰</div>
+          <div class="report-meta">کیلومتر ۱۲+۱۰۰ تا ۱۲+۴۵۰ (۳۵۰ متر) • امضای ثابت سرپرست</div>
+        </div>
+      </section>
+
+      <!-- =========================================================
+           صفحه ۲: ثبت گزارش روزانه (REPORT EDITOR)
+           مشخصات کلی پروژه، واحد، نویسنده و امضا از تنظیمات خوانده می‌شوند!
+           ========================================================= -->
+      <section class="screen-page" id="page-editor">
+
+        <!-- بنر فشرده اطلاعات ثابت (خوانده‌شده از تنظیمات — بدون نیاز به ورود مجدد) -->
+        <div class="fixed-profile-banner">
+          <div>
+            <strong id="bannerProjTitle">پروژه خط انتقال آب — قطعه ۲</strong>
+            <div style="color: var(--text-sub); margin-top: 1px;">
+              <span id="bannerUnit">👷 واحد اجرایی</span> • <span id="bannerAuthor">مهندس مصطفی رضایی</span> • <span>امضای ثابت ✓</span>
+            </div>
+          </div>
+          <button class="btn-mini" style="background: var(--surface); color: var(--primary); border: 1px solid var(--border);" onclick="switchNav('settings')">
+            تغییر در تنظیمات ⚙️
+          </button>
+        </div>
+
+        <!-- شبکه ۶ تب کاملاً قابل مشاهده (۲ ردیف ۳تایی بدون اسکرول مخفی!) -->
+        <div class="compose-tabs-grid">
+          <div class="compose-tab active" onclick="switchEditorTab(0, this)">۱. تاریخ و هوا</div>
+          <div class="compose-tab" onclick="switchEditorTab(1, this)">۲. فعالیت‌ها <span class="cnt" id="cntTasks">۲</span></div>
+          <div class="compose-tab" onclick="switchEditorTab(2, this)">۳. نیروها <span class="cnt" id="cntManpower">۴</span></div>
+          <div class="compose-tab" onclick="switchEditorTab(3, this)">۴. ماشین‌آلات <span class="cnt" id="cntMachinery">۳</span></div>
+          <div class="compose-tab" onclick="switchEditorTab(4, this)">۵. مصالح <span class="cnt" id="cntMaterials">۲</span></div>
+          <div class="compose-tab" onclick="switchEditorTab(5, this)">۶. موانع و عکس</div>
+        </div>
+
+        <!-- تب ۱: فقط تاریخ روز، شماره اتوماتیک گزارش (از ۱۰۰ به بالا) و وضعیت آب‌وهوا -->
+        <div class="editor-step-pane active" id="step-0">
+          <div class="form-card">
+            <div class="form-card-title">
+              <span>📅 تاریخ و شماره اتوماتیک گزارش امروز</span>
+              <button class="btn-mini" style="background: var(--accent-light); color: var(--accent);" onclick="copyFromYesterday()">⚡ کپی از دیروز</button>
+            </div>
+
+            <div class="row-2col">
+              <div class="field-group">
+                <label class="field-label">تاریخ گزارش (شمسی)</label>
+                <input type="text" class="field-input" id="inpReportDate" value="۱۴۰۵/۰۷/۲۷" readonly onclick="openDatePickerSheet()" style="cursor: pointer; font-weight: 800; color: var(--primary); text-align: center;" />
+              </div>
+              <div class="field-group">
+                <label class="field-label">شماره گزارش (اتوماتیک از ۱۰۰)</label>
+                <div style="display: flex; gap: 4px;">
+                  <input type="number" class="field-input" id="inpReportNumber" value="104" style="text-align: center; font-weight: 900; color: var(--success);" oninput="syncReportNumber(this.value)" />
+                  <button class="ctrl-btn" title="افزایش خودکار" onclick="incrementReportNum()">+۱</button>
+                </div>
+              </div>
+            </div>
+            <div style="font-size: 10px; color: var(--text-sub); background: var(--surface-2); padding: 6px 8px; border-radius: 8px;">
+              💡 نام پروژه، واحد گزارش‌دهنده، نام تهیه‌کننده و امضای شما در <strong>بخش تنظیمات</strong> ثابت شده‌اند و به صورت خودکار روی گزارش درج می‌شوند.
+            </div>
+          </div>
+
+          <div class="form-card">
+            <div class="form-card-title">
+              <span>🌤️ وضعیت آب‌وهوای امروز کارگاه</span>
+              <button class="btn-mini" style="background: var(--primary-light); color: var(--primary);" onclick="refreshWeather()">📍 دریافت خودکار GPS</button>
+            </div>
+            <div class="row-3col">
+              <div class="field-group">
+                <label class="field-label">شرایط جوی</label>
+                <select class="field-select" id="inpWeatherDesc">
+                  <option>☀️ صاف و آفتابی</option>
+                  <option>⛅ نیمه‌ابری</option>
+                  <option>🌧️ بارانی</option>
+                  <option>🌪️ باد و گردوغبار</option>
+                  <option>❄️ برفی و یخبندان</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label class="field-label">حداقل دما (°C)</label>
+                <input type="text" class="field-input" value="۱۴" style="text-align: center; font-weight: 800;" />
+              </div>
+              <div class="field-group">
+                <label class="field-label">حداکثر دما (°C)</label>
+                <input type="text" class="field-input" value="۲۶" style="text-align: center; font-weight: 800;" />
+              </div>
+            </div>
+          </div>
+
+          <button class="btn-hero-primary" style="width: 100%; padding: 11px;" onclick="switchEditorTab(1, document.querySelectorAll('.compose-tab')[1])">
+            مرحله بعد: ثبت فعالیت‌های امروز ←
+          </button>
+        </div>
+
+        <!-- تب ۲: فعالیت‌ها (با قابلیت جابجایی بالا/پایین، ویرایش و حذف) -->
+        <div class="editor-step-pane" id="step-1">
+          <div class="form-card" style="border-right: 4px solid var(--primary);">
+            <div class="form-card-title">
+              <span id="taskFormHeader">➕ افزودن / ویرایش فعالیت</span>
+              <span style="font-size: 10px; color: var(--text-sub);">پشتیبانی از جابجایی، ویرایش و حذف</span>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">شرح عملیات اجرایی</label>
+              <input type="text" class="field-input" id="inpTaskTitle" placeholder="مثلاً: حفاری ترانشه، لوله‌گذاری، بتن‌ریزی..." />
+            </div>
+
+            <div class="row-2col">
+              <div class="field-group">
+                <label class="field-label">از کیلومتر</label>
+                <input type="text" class="field-input km-input" id="inpStartKm" value="12+450" oninput="autoFormatKm(this); calcKmDiff();" />
+              </div>
+              <div class="field-group">
+                <label class="field-label">تا کیلومتر</label>
+                <input type="text" class="field-input km-input" id="inpEndKm" value="12+820" oninput="autoFormatKm(this); calcKmDiff();" />
+              </div>
+            </div>
+
+            <div class="km-badge-result">
+              <span>📏 متراژ طولی محاسبه‌شده:</span>
+              <strong dir="ltr" id="kmDiffText">370 m</strong>
+            </div>
+
+            <div class="row-3col" style="margin-top: 8px;">
+              <div class="field-group">
+                <label class="field-label">مقدار</label>
+                <input type="text" class="field-input" id="inpTaskQty" value="370" style="text-align: center; font-weight: 800;" />
+              </div>
+              <div class="field-group">
+                <label class="field-label">واحد</label>
+                <input type="text" class="field-input" id="inpTaskUnit" value="متر طول" style="text-align: center;" />
+              </div>
+              <div class="field-group">
+                <label class="field-label">توضیحات / جبهه</label>
+                <input type="text" class="field-input" id="inpTaskDesc" placeholder="قطعه ۲ شمالی" />
+              </div>
+            </div>
+
+            <button class="btn-hero-primary" style="width: 100%; margin-top: 8px;" id="btnSaveTask" onclick="saveTaskRow()">
+              + ثبت در لیست فعالیت‌ها
+            </button>
+          </div>
+
+          <div id="tasksListContainer"></div>
+        </div>
+
+        <!-- تب ۳: نیروی انسانی (با قابلیت تعیین حاضر/مرخصی، جابجایی، ویرایش و حذف) -->
+        <div class="editor-step-pane" id="step-2">
+          <div class="form-card" style="border-right: 4px solid var(--accent);">
+            <div class="form-card-title">
+              <span id="manpowerFormHeader">👷 افزودن / ویرایش ردیف نیروی انسانی</span>
+              <span style="font-size: 10px; color: var(--text-sub);">وضعیت حضور / مرخصی</span>
+            </div>
+            <div class="row-2col">
+              <div class="field-group">
+                <label class="field-label">نام شخص / عنوان شغل / رسته</label>
+                <input type="text" class="field-input" id="inpMpRole" placeholder="مثلاً: علی رضایی (جوشکار)" />
+              </div>
+              <div class="field-group">
+                <label class="field-label">وضعیت حضور</label>
+                <select class="field-select" id="inpMpLeaveStatus" style="font-weight: 800; color: var(--success);" onchange="this.style.color = this.value === 'مرخصی' ? 'var(--warning)' : 'var(--success)'">
+                  <option value="حاضر">🟢 حاضر در کارگاه</option>
+                  <option value="مرخصی">🏖️ مرخصی</option>
+                </select>
+              </div>
+            </div>
+            <div class="row-3col">
+              <div class="field-group">
+                <label class="field-label">تعداد (نفر)</label>
+                <input type="number" class="field-input" id="inpMpCount" value="1" style="text-align: center; font-weight: 800;" />
+              </div>
+              <div class="field-group" style="grid-column: span 2;">
+                <label class="field-label">توضیحات / محل استقرار</label>
+                <input type="text" class="field-input" id="inpMpDesc" placeholder="مثلاً: مستقر در جبهه حفاری و حوضچه شیرآلات" />
+              </div>
+            </div>
+            <button class="btn-hero-primary" style="width: 100%; margin-top: 6px;" id="btnSaveMp" onclick="saveManpowerRow()">
+              + ثبت ردیف نیروی انسانی
+            </button>
+          </div>
+
+          <div id="manpowerListContainer"></div>
+        </div>
+
+        <!-- تب ۴: ماشین‌آلات (شامل نوع مالکیت: شرکتی / استیجاری / پیمانکار + توضیحات دستی + جابجایی/ویرایش/حذف) -->
+        <div class="editor-step-pane" id="step-3">
+          <div class="form-card" style="border-right: 4px solid var(--purple);">
+            <div class="form-card-title">
+              <span id="machFormHeader">🚜 افزودن / ویرایش ماشین‌آلات کارگاهی</span>
+            </div>
+
+            <div class="row-2col">
+              <div class="field-group">
+                <label class="field-label">نام دستگاه / ماشین</label>
+                <input type="text" class="field-input" id="inpMachName" placeholder="مثلاً: بیل مکانیکی هیوندای ۳۳۰" />
+              </div>
+              <div class="field-group">
+                <label class="field-label">نوع مالکیت دستگاه</label>
+                <select class="field-select" id="inpMachOwner" style="font-weight: 800; color: var(--primary);">
+                  <option value="شرکتی">🏢 شرکتی (ملکی)</option>
+                  <option value="استیجاری">🤝 استیجاری</option>
+                  <option value="پیمانکار">👷 پیمانکار</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row-2col">
+              <div class="field-group">
+                <label class="field-label">وضعیت کارکرد</label>
+                <select class="field-select" id="inpMachStatus">
+                  <option value="فعال">🟢 فعال در خط</option>
+                  <option value="آماده به کار">🟡 آماده به کار</option>
+                  <option value="خراب / غیرفعال">🔴 خراب / تعمیرگاه</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label class="field-label">ساعت کارکرد / تعداد سرویس</label>
+                <input type="text" class="field-input" id="inpMachHours" value="۹ ساعت" style="text-align: center; font-weight: 800;" />
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">توضیحات دستی (محل کار، نام راننده، علت توقف و...)</label>
+              <input type="text" class="field-input" id="inpMachDesc" placeholder="مثلاً: حفاری ترانشه کیلومتر ۱۲+۴۵۰ — راننده: رحیمی" />
+            </div>
+
+            <button class="btn-hero-primary" style="width: 100%; margin-top: 6px;" id="btnSaveMach" onclick="saveMachineryRow()">
+              + ثبت در لیست ماشین‌آلات
+            </button>
+          </div>
+
+          <div id="machineryListContainer"></div>
+        </div>
+
+        <!-- تب ۵: مصالح (با قابلیت جابجایی، ویرایش و حذف) -->
+        <div class="editor-step-pane" id="step-4">
+          <div class="form-card" style="border-right: 4px solid var(--teal);">
+            <div class="form-card-title">
+              <span id="matFormHeader">📦 افزودن / ویرایش مصالح مصرفی یا وارده</span>
+            </div>
+            <div class="row-3col">
+              <div class="field-group" style="grid-column: span 2;">
+                <label class="field-label">نام مصالح / کالا</label>
+                <input type="text" class="field-input" id="inpMatName" placeholder="مثلاً: لوله چدن داکتیل قطر ۶۰۰" />
+              </div>
+              <div class="field-group">
+                <label class="field-label">مقدار و واحد</label>
+                <input type="text" class="field-input" id="inpMatQty" placeholder="۵۰ شاخه" style="text-align: center; font-weight: 800;" />
+              </div>
+            </div>
+            <div class="field-group">
+              <label class="field-label">توضیحات (شماره حواله، محل مصرف، تأمین‌کننده)</label>
+              <input type="text" class="field-input" id="inpMatDesc" placeholder="حواله WH-4092 — مصرف در کیلومتر ۱۲+۱۰۰" />
+            </div>
+            <button class="btn-hero-primary" style="width: 100%; margin-top: 6px;" id="btnSaveMat" onclick="saveMaterialRow()">
+              + ثبت ردیف مصالح
+            </button>
+          </div>
+
+          <div id="materialsListContainer"></div>
+        </div>
+
+        <!-- تب ۶: موانع و ذخیره‌سازی ۱ ماهه تصاویر با واترمارک کارگاهی -->
+        <div class="editor-step-pane" id="step-5">
+          <div class="form-card">
+            <div class="form-card-title">
+              <span>⚠️ موانع کارگاهی و برنامه فردا</span>
+            </div>
+            <div class="field-group">
+              <label class="field-label">موانع، مشکلات، توقفات یا معارضین</label>
+              <textarea class="field-textarea" rows="2" id="inpIssues">برخورد با کابل مخابراتی قدیمی در کیلومتر ۱۲+۶۸۰؛ هماهنگی با اداره مخابرات جهت ایمن‌سازی انجام شد.</textarea>
+            </div>
+            <div class="field-group">
+              <label class="field-label">برنامه اجرایی فردا (قابل کپی خودکار در گزارش فردا)</label>
+              <textarea class="field-textarea" rows="2" id="inpTomorrow">ادامه حفاری ترانشه از کیلومتر ۱۲+۸۲۰ الی ۱۳+۲۰۰ و بتن‌ریزی پشت‌بند حوضچه شیر هوا.</textarea>
+            </div>
+          </div>
+
+          <!-- گالری تصاویر با نگهداری ۱ ماهه (۳۰ روز) در دیتابیس و واترمارک کارگاهی -->
+          <div class="form-card">
+            <div class="form-card-title">
+              <span>📷 تصاویر پیوست (ذخیره ۱ ماهه در دیتابیس + واترمارک)</span>
+              <span class="unit-tag" style="background: var(--success-light); color: var(--success);">ماندگاری ۳۰ روزه</span>
+            </div>
+            <div style="font-size: 10px; color: var(--text-sub); margin-bottom: 8px;">
+              تصاویر به همراه واترمارک خودکار (تاریخ، ساعت، نام پروژه و شماره گزارش) به مدت <strong>۱ ماه (۳۰ روز)</strong> در دیتابیس گزارش ذخیره می‌مانند.
+            </div>
+            <div class="photo-grid">
+              <div class="photo-slot filled" onclick="showToast('تصویر ۱ با واترمارک کارگاهی در دیتابیس ذخیره شده است')">
+                <span style="font-size: 20px;">🏞️</span>
+                <span>حفاری ترانشه خط</span>
+                <div class="photo-watermark">1405/07/27 | #104 | KM 12+450</div>
+              </div>
+              <div class="photo-slot filled" onclick="showToast('تصویر ۲ با واترمارک کارگاهی در دیتابیس ذخیره شده است')">
+                <span style="font-size: 20px;">🏗️</span>
+                <span>لوله‌گذاری داکتیل ۶۰۰</span>
+                <div class="photo-watermark">1405/07/27 | #104 | KM 12+100</div>
+              </div>
+              <div class="photo-slot" onclick="addDemoPhoto(this)">
+                <span style="font-size: 18px;">➕📷</span>
+                <span>افزودن عکس ۳ (با واترمارک)</span>
+              </div>
+              <div class="photo-slot" onclick="addDemoPhoto(this)">
+                <span style="font-size: 18px;">➕📷</span>
+                <span>افزودن عکس ۴ (با واترمارک)</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px; margin-top: 8px;">
+            <button class="btn-hero-primary" style="flex: 1; padding: 11px;" onclick="saveReportFinal()">💾 ذخیره نهایی گزارش #۱۰۴</button>
+            <button class="btn-hero-secondary" style="background: var(--primary); color: #fff; flex: 1; justify-content: center;" onclick="openPdfSheet()">🖨️ خروجی PDF</button>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- =========================================================
+           صفحه ۳: آرشیو و فیلتر (ARCHIVE & FILTER)
+           ========================================================= -->
+      <section class="screen-page" id="page-archive">
+        <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+          <input type="text" class="field-input" id="archiveSearchInput" placeholder="🔍 جستجو در شماره گزارش، فعالیت یا تاریخ..." oninput="filterArchiveList()" style="background: var(--surface);" />
+          <button class="icon-btn" style="width: 40px; height: 38px; background: var(--primary); color: #fff; border: none;" onclick="openFilterSheet()">⚙️</button>
+        </div>
+
+        <div class="h-scroll-row">
+          <div class="unit-chip active" onclick="filterByUnitChip('ALL', this)">همه گزارش‌ها</div>
+          <div class="unit-chip" onclick="filterByUnitChip('EXECUTION', this)">👷 اجرایی</div>
+          <div class="unit-chip" onclick="filterByUnitChip('HSE', this)">🦺 HSE</div>
+          <div class="unit-chip" onclick="filterByUnitChip('WAREHOUSE', this)">📦 انبار</div>
+          <div class="unit-chip" onclick="filterByUnitChip('TECHNICAL', this)">📐 دفتر فنی</div>
+        </div>
+
+        <div id="archiveCardsWrapper">
+          <div class="report-item-card" data-unit="EXECUTION">
+            <div class="report-card-top">
+              <span class="unit-tag" style="background: var(--primary-light); color: var(--primary);">👷 واحد اجرایی • گزارش #۱۰۴</span>
+              <span style="font-size: 11.5px; font-weight: 800;">۱۴۰۵/۰۷/۲۷</span>
+            </div>
+            <div class="report-title">حفاری ترانشه و لوله‌گذاری خط انتقال — قطعه ۲</div>
+            <div class="report-meta">کیلومتر ۱۲+۴۵۰ الی ۱۲+۸۲۰ • مهندس مصطفی رضایی</div>
+            <div class="report-pills">
+              <div class="pill-group">
+                <span class="stat-pill">🛠️ ۲ فعالیت</span>
+                <span class="stat-pill">🚜 ۳ دستگاه</span>
+                <span class="stat-pill">📷 ۲ عکس (۱ ماهه)</span>
+              </div>
+              <div>
+                <button class="btn-mini" style="background: var(--primary-light); color: var(--primary);" onclick="openPdfSheet()">PDF 📄</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="report-item-card" data-unit="EXECUTION">
+            <div class="report-card-top">
+              <span class="unit-tag" style="background: var(--primary-light); color: var(--primary);">👷 واحد اجرایی • گزارش #۱۰۳</span>
+              <span style="font-size: 11.5px; font-weight: 800;">۱۴۰۵/۰۷/۲۶</span>
+            </div>
+            <div class="report-title">خاکبرداری ترانشه و تست هیدرواستاتیک لوله ۶۰۰</div>
+            <div class="report-meta">کیلومتر ۱۲+۱۰۰ الی ۱۲+۴۵۰ • مهندس مصطفی رضایی</div>
+            <div class="report-pills">
+              <div class="pill-group">
+                <span class="stat-pill">🛠️ ۴ فعالیت</span>
+                <span class="stat-pill">🚜 ۸ دستگاه</span>
+                <span class="stat-pill">📷 ۴ عکس (۱ ماهه)</span>
+              </div>
+              <div>
+                <button class="btn-mini" style="background: var(--primary-light); color: var(--primary);" onclick="openPdfSheet()">PDF 📄</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================
+           صفحه ۴: تنظیمات ثابت پروژه، شماره شروع گزارش و امضای دائمی
+           ========================================================= -->
+      <section class="screen-page" id="page-settings">
+
+        <div class="form-card" style="border-right: 4px solid var(--primary);">
+          <div class="form-card-title">
+            <span>🏢 مشخصات ثابت پروژه و گزارش‌دهنده</span>
+            <span class="unit-tag" style="background: var(--success-light); color: var(--success);">یک‌بار تنظیم برای همیشه</span>
+          </div>
+          <div style="font-size: 10px; color: var(--text-sub); margin-bottom: 8px;">
+            این مشخصات به صورت پیش‌فرض برای تمام گزارش‌های روزانه استفاده می‌شوند و دیگر نیازی به پر کردن روزانه آن‌ها نیست.
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">نام ثابت پروژه عمرانی / کارگاه</label>
+            <input type="text" class="field-input" id="setProjectName" value="پروژه احداث خط انتقال آب و ابنیه فنی — قطعه ۲" oninput="saveFixedSettings()" />
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">واحد سازمانی گزارش‌دهنده ثابت</label>
+            <select class="field-select" id="setFixedUnit" onchange="saveFixedSettings()">
+              <option value="👷 واحد اجرایی">👷 واحد اجرایی (عملیات کارگاهی و کیلومتراژ)</option>
+              <option value="📦 واحد انبار">📦 واحد انبار (ورود، خروج و موجودی کالا)</option>
+              <option value="📐 واحد دفتر فنی">📐 واحد دفتر فنی (متره، نقشه‌ها و صورت‌جلسات)</option>
+              <option value="🦺 واحد ایمنی و HSE">🦺 واحد ایمنی و بهداشت (HSE)</option>
+              <option value="🔭 واحد نقشه‌برداری">🔭 واحد نقشه‌برداری (برداشت و پیاده‌سازی)</option>
+              <option value="⚖️ واحد حقوقی">⚖️ واحد حقوقی و قراردادها</option>
+            </select>
+          </div>
+
+          <div class="row-2col">
+            <div class="field-group">
+              <label class="field-label">نام و سمت تهیه‌کننده گزارش</label>
+              <input type="text" class="field-input" id="setAuthorName" value="مهندس مصطفی رضایی" oninput="saveFixedSettings()" />
+            </div>
+            <div class="field-group">
+              <label class="field-label">شماره پایه شروع گزارش‌ها</label>
+              <input type="number" class="field-input" id="setBaseReportNum" value="100" style="text-align: center; font-weight: 900; color: var(--primary);" oninput="saveFixedSettings()" />
+            </div>
+          </div>
+        </div>
+
+        <!-- امضای دیجیتال ثابت کاربر در تنظیمات -->
+        <div class="form-card">
+          <div class="form-card-title">
+            <span>✍️ امضای دیجیتال ثابت کاربر (درج خودکار در PDF)</span>
+            <button class="btn-mini" style="background: var(--danger-light); color: var(--danger);" onclick="clearSignature()">پاک کردن و رسم مجدد</button>
+          </div>
+          <canvas id="sigCanvas" class="sig-pad" width="340" height="100"></canvas>
+          <button class="btn-hero-primary" style="width: 100%; margin-top: 8px;" onclick="saveFixedSettings(); showToast('مشخصات ثابت پروژه و امضای شما ذخیره شد ✅');">
+            💾 ذخیره مشخصات ثابت و امضا
+          </button>
+        </div>
+
+        <!-- مدیریت کش ۱ ماهه عکس‌ها و بکاپ -->
+        <div class="form-card">
+          <div class="form-card-title">
+            <span>📷 نگهداری ۱ ماهه تصاویر و پشتیبان‌گیری</span>
+          </div>
+          <div style="font-size: 10.5px; color: var(--text-sub); margin-bottom: 8px;">
+            • تصاویر پیوست گزارش‌ها با واترمارک کارگاهی به مدت <strong>۳۰ روز کامل</strong> در دیتابیس ذخیره می‌شوند.<br/>
+            • خروجی بکاپ JSON شامل تمامی فیلدهای کیلومتراژ، نوع مالکیت ماشین‌آلات و توضیحات است.
+          </div>
+          <div class="row-2col">
+            <button class="btn-mini" style="padding: 9px; justify-content: center; background: var(--primary-light); color: var(--primary);" onclick="showToast('فایل بکاپ کامل JSON ذخیره شد 💾')">📤 تهیه بکاپ کامل</button>
+            <button class="btn-mini" style="padding: 9px; justify-content: center; background: var(--surface-2); border: 1px solid var(--border);" onclick="showToast('بکاپ بدون تکرار بازیابی شد 📥')">📥 بازیابی بکاپ</button>
+          </div>
+        </div>
+
+        <!-- کارت درباره ما و لوگوی نسخه 3.1.0 -->
+        <div class="form-card" style="text-align: center; padding: 14px;">
+          <div style="margin-bottom: 6px; display: flex; justify-content: center; cursor: pointer;" onclick="openLogoSheet()">
+            <svg width="64" height="64"><use href="#buildreport-logo"></use></svg>
+          </div>
+          <div style="font-size: 13.5px; font-weight: 900;">گزارش روزانه کارگاه (BuildReport) — نسخه 3.1.0</div>
+          <button class="btn-mini" style="background: var(--accent-light); color: var(--accent); padding: 6px 12px; margin-top: 6px;" onclick="openLogoSheet()">
+            🎨 مشاهده طراحی آیکن و لوگوی اندروید
+          </button>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- دکمه شناور ثبت سریع -->
+    <button class="android-fab" id="mainFab" onclick="switchNav('editor')">
+      <span>➕</span><span>ثبت گزارش</span>
+    </button>
+
+    <!-- نوار ناوبری پایین صفحه -->
+    <nav class="bottom-nav-bar">
+      <div class="nav-tab active" id="nav-dashboard" onclick="switchNav('dashboard')">
+        <div class="nav-pill">🏠</div><span class="nav-label">داشبورد</span>
+      </div>
+      <div class="nav-tab" id="nav-editor" onclick="switchNav('editor')">
+        <div class="nav-pill">📝</div><span class="nav-label">ثبت گزارش</span>
+      </div>
+      <div class="nav-tab" id="nav-archive" onclick="switchNav('archive')">
+        <div class="nav-pill">🗂️</div><span class="nav-label">آرشیو</span>
+      </div>
+      <div class="nav-tab" id="nav-settings" onclick="switchNav('settings')">
+        <div class="nav-pill">⚙️</div><span class="nav-label">تنظیمات</span>
+      </div>
+    </nav>
+
+    <div class="gesture-bar"></div>
+
+    <!-- شیت فیلتر آرشیو -->
+    <div class="sheet-backdrop" id="filterSheet" onclick="closeSheets(event)">
+      <div class="bottom-sheet" onclick="event.stopPropagation()">
+        <div class="sheet-handle"></div>
+        <div class="form-card-title">
+          <span>🔍 فیلتر گزارش‌ها</span>
+          <button class="btn-mini" onclick="closeAllSheets()">بستن ✕</button>
+        </div>
+        <div class="field-group">
+          <label class="field-label">واحد گزارش‌دهنده</label>
+          <select class="field-select" id="sheetUnitFilter">
+            <option value="ALL">همه واحدها</option>
+            <option value="EXECUTION">👷 واحد اجرایی</option>
+            <option value="HSE">🦺 واحد HSE</option>
+            <option value="WAREHOUSE">📦 واحد انبار</option>
+            <option value="TECHNICAL">📐 واحد دفتر فنی</option>
+          </select>
+        </div>
+        <button class="btn-hero-primary" style="width: 100%;" onclick="applySheetFilter()">اعمال فیلتر</button>
+      </div>
+    </div>
+
+    <!-- شیت پیش‌نمایش PDF -->
+    <div class="sheet-backdrop" id="pdfSheet" onclick="closeSheets(event)">
+      <div class="bottom-sheet" onclick="event.stopPropagation()">
+        <div class="sheet-handle"></div>
+        <div class="form-card-title">
+          <span>📄 پیش‌نمایش خروجی PDF استاندارد A4</span>
+          <button class="btn-mini" onclick="closeAllSheets()">بستن ✕</button>
+        </div>
+        <div style="background: #fff; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px; font-size: 10px; line-height: 1.6;">
+          <div style="border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; margin-bottom: 6px; display: flex; justify-content: space-between;">
+            <div>
+              <div style="font-weight: 900; font-size: 11.5px; color: #1e3a8a;" id="pdfTitleUnit">گزارش روزانه — واحد اجرایی</div>
+              <div id="pdfProjName">پروژه احداث خط انتقال آب و ابنیه فنی — قطعه ۲</div>
+            </div>
+            <div style="text-align: left;">
+              <div><strong>تاریخ:</strong> ۱۴۰۵/۰۷/۲۷</div>
+              <div><strong>شماره گزارش:</strong> <span id="pdfRepNum">۱۰۴</span></div>
+            </div>
+          </div>
+          <div style="margin-bottom: 6px;">
+            <strong>تهیه‌کننده:</strong> <span id="pdfAuthor">مهندس مصطفی رضایی</span> • <strong>امضای ثابت:</strong> ✓ درج خودکار از تنظیمات
+          </div>
+          <div style="font-size: 9.5px; background: #f8fafc; padding: 6px; border-radius: 6px;">
+            • شامل جداول مرتب‌شده فعالیت‌ها، نیروی انسانی، ماشین‌آلات (با ستون شرکتی/استیجاری/پیمانکار و توضیحات) و تصاویر واترمارک‌دار
+          </div>
+        </div>
+        <button class="btn-hero-primary" style="width: 100%; margin-top: 10px;" onclick="closeAllSheets(); showToast('فایل PDF آماده اشتراک‌گذاری شد 📤');">📤 اشتراک‌گذاری PDF</button>
+      </div>
+    </div>
+
+    <!-- شیت انتخاب تاریخ شمسی -->
+    <div class="sheet-backdrop" id="datePickerSheet" onclick="closeSheets(event)">
+      <div class="bottom-sheet" onclick="event.stopPropagation()">
+        <div class="sheet-handle"></div>
+        <div class="form-card-title">
+          <span>📅 انتخاب تاریخ شمسی</span>
+          <button class="btn-mini" onclick="closeAllSheets()">بستن ✕</button>
+        </div>
+        <div class="row-3col">
+          <select class="field-select" id="pickDay"><option>۲۶</option><option selected>۲۷</option><option>۲۸</option></select>
+          <select class="field-select" id="pickMonth"><option value="۰۷" selected>مهر (۰۷)</option><option value="۰۸">آبان (۰۸)</option></select>
+          <select class="field-select" id="pickYear"><option selected>۱۴۰۵</option><option>۱۴۰۶</option></select>
+        </div>
+        <button class="btn-hero-primary" style="width: 100%; margin-top: 10px;" onclick="confirmPersianDate()">تأیید تاریخ</button>
+      </div>
+    </div>
+
+    <!-- شیت نمایش لوگوی جدید -->
+    <div class="sheet-backdrop" id="logoSheet" onclick="closeSheets(event)">
+      <div class="bottom-sheet" onclick="event.stopPropagation()">
+        <div class="sheet-handle"></div>
+        <div class="form-card-title">
+          <span>🎨 آیکن و لوگوی اختصاصی نسخه 3.1.0</span>
+          <button class="btn-mini" onclick="closeAllSheets()">بستن ✕</button>
+        </div>
+        <div style="background: #0f172a; border-radius: 16px; padding: 16px; text-align: center; color: #fff; margin-bottom: 10px;">
+          <svg width="105" height="105"><use href="#buildreport-logo"></use></svg>
+          <div style="font-size: 13px; font-weight: 800; margin-top: 6px;">BuildReport v3.1.0 Adaptive Icon</div>
+        </div>
+        <button class="btn-hero-primary" style="width: 100%;" onclick="closeAllSheets()">بستن</button>
+      </div>
+    </div>
+
+    <div class="android-toast" id="androidToast">عملیات انجام شد</div>
+  </div>
+
+  <script>
+    // داده‌های اولیه برای ۴ لیست اصلی با پشتیبانی کامل از جابجایی (Up/Down)، ویرایش (Edit) و حذف (Delete)
+    let tasksData = [
+      { title: 'حفاری و رگلاژ بستر ترانشه خط انتقال', startKm: '12+100', endKm: '12+450', qty: '350', unit: 'متر طول', desc: 'قطعه ۲ شمالی' },
+      { title: 'لوله‌گذاری و تست هیدرواستاتیک لوله ۶۰۰ داکتیل', startKm: '11+800', endKm: '12+100', qty: '300', unit: 'متر طول', desc: 'اکیپ جوشکاری ۱' }
+    ];
+    let editingTaskIdx = -1;
+
+    let manpowerData = [
+      { role: 'کادر مهندسی و سرپرستی کارگاه', count: 5, status: 'حاضر', desc: 'سرپرست، دفتر فنی، HSE و نقشه‌برداری' },
+      { role: 'استادکار، جوشکار و لوله‌گذار', count: 7, status: 'حاضر', desc: 'خط لوله چدن داکتیل' },
+      { role: 'احمد کریمی — تکنسین تأسیسات', count: 1, status: 'مرخصی', desc: 'مرخصی روزانه با هماهنگی سرپرست' },
+      { role: 'کارگر ساده و خدماتی کارگاه', count: 8, status: 'حاضر', desc: 'پیمانکار ابنیه و تدارکات' }
+    ];
+    let editingMpIdx = -1;
+
+    let machineryData = [
+      { name: 'بیل مکانیکی زنجیری هیوندای ۳۳۰', owner: 'شرکتی', status: 'فعال', hours: '۹ ساعت', desc: 'حفاری ترانشه KM 12+450 — راننده: رحیمی' },
+      { name: 'جرثقیل ۲۵ تن تادانو (لوله‌گذاری)', owner: 'استیجاری', status: 'فعال', hours: '۸ ساعت', desc: 'نصب لوله در KM 12+100 — راننده: کاظمی' },
+      { name: 'کمپرسی دهچرخ بنز', owner: 'پیمانکار', status: 'آماده به کار', hours: '۱۲ سرویس', desc: 'حمل خاک نباتی و رگلاژ مسیر' }
+    ];
+    let editingMachIdx = -1;
+
+    let materialsData = [
+      { name: 'لوله چدن داکتیل قطر ۶۰۰ میلی‌متر', qty: '۵۰ شاخه', desc: 'حواله WH-4092 — مصرف در خط شمالی' },
+      { name: 'ماسه بادی سرندی بستر لوله', qty: '۱۸۵ تن', desc: 'معدن شهریار — بارنامه کامل' }
+    ];
+    let editingMatIdx = -1;
+
+    // رندر لیست فعالیت‌ها با دکمه‌های ⬆️ ⬇️ ✏️ 🗑️
+    function renderTasks() {
+      const container = document.getElementById('tasksListContainer');
+      container.innerHTML = tasksData.map((t, i) => `
+        <div class="report-item-card">
+          <div class="report-card-top">
+            <span class="unit-tag" style="background: var(--primary-light); color: var(--primary);" dir="ltr">KM ${t.startKm} → ${t.endKm}</span>
+            <div class="item-ctrl-bar">
+              <button class="ctrl-btn" title="جابجایی به بالا" onclick="moveItem(tasksData, ${i}, -1, renderTasks)">⬆️</button>
+              <button class="ctrl-btn" title="جابجایی به پایین" onclick="moveItem(tasksData, ${i}, 1, renderTasks)">⬇️</button>
+              <button class="ctrl-btn edit" onclick="editTask(${i})">✏️ ویرایش</button>
+              <button class="ctrl-btn del" onclick="deleteItem(tasksData, ${i}, renderTasks)">🗑️</button>
+            </div>
+          </div>
+          <div class="report-title">${i + 1}. ${t.title}</div>
+          <div class="report-pills">
+            <span class="stat-pill">مقدار: <strong>${t.qty} ${t.unit}</strong></span>
+            <span class="stat-pill">توضیحات: ${t.desc || '—'}</span>
+          </div>
+        </div>
+      `).join('');
+      document.getElementById('cntTasks').textContent = tasksData.length.toLocaleString('fa-IR');
+    }
+
+    function saveTaskRow() {
+      const title = document.getElementById('inpTaskTitle').value.trim() || 'عملیات اجرایی کارگاه';
+      const item = {
+        title,
+        startKm: document.getElementById('inpStartKm').value || '12+450',
+        endKm: document.getElementById('inpEndKm').value || '12+820',
+        qty: document.getElementById('inpTaskQty').value || '370',
+        unit: document.getElementById('inpTaskUnit').value || 'متر طول',
+        desc: document.getElementById('inpTaskDesc').value || 'قطعه ۲'
+      };
+      if (editingTaskIdx > -1) {
+        tasksData[editingTaskIdx] = item;
+        editingTaskIdx = -1;
+        document.getElementById('btnSaveTask').textContent = '+ ثبت در لیست فعالیت‌ها';
+        showToast('فعالیت ویرایش و بروزرسانی شد ✏️');
+      } else {
+        tasksData.push(item);
+        showToast('فعالیت جدید اضافه شد ✅');
+      }
+      document.getElementById('inpTaskTitle').value = '';
+      document.getElementById('inpTaskDesc').value = '';
+      renderTasks();
+    }
+
+    function editTask(i) {
+      const t = tasksData[i];
+      editingTaskIdx = i;
+      document.getElementById('inpTaskTitle').value = t.title;
+      document.getElementById('inpStartKm').value = t.startKm;
+      document.getElementById('inpEndKm').value = t.endKm;
+      document.getElementById('inpTaskQty').value = t.qty;
+      document.getElementById('inpTaskUnit').value = t.unit;
+      document.getElementById('inpTaskDesc').value = t.desc;
+      document.getElementById('btnSaveTask').textContent = '💾 ذخیره تغییرات فعالیت #' + (i + 1);
+      showToast('در حال ویرایش فعالیت شماره ' + (i + 1));
+    }
+
+    // رندر لیست نیروی انسانی با نمایش وضعیت حاضر/مرخصی و دکمه‌های ⬆️ ⬇️ ✏️ 🗑️
+    function renderManpower() {
+      const container = document.getElementById('manpowerListContainer');
+      container.innerHTML = manpowerData.map((m, i) => {
+        const isLeave = m.status === 'مرخصی';
+        const statusBg = isLeave ? '#fef3c7' : 'var(--success-light)';
+        const statusColor = isLeave ? '#b45309' : 'var(--success)';
+        const statusLabel = isLeave ? '🏖️ مرخصی' : '🟢 حاضر در کارگاه';
+        return `
+        <div class="report-item-card" style="${isLeave ? 'border-right: 3px solid #f59e0b; background: #fffbeb;' : ''}">
+          <div class="report-card-top">
+            <div style="display: flex; gap: 4px; align-items: center;">
+              <span class="unit-tag" style="background: var(--accent-light); color: var(--accent);">👥 تعداد: ${m.count} نفر</span>
+              <span class="unit-tag" style="background: ${statusBg}; color: ${statusColor}; cursor: pointer;" title="لمس برای تغییر وضعیت حاضر/مرخصی" onclick="toggleMpLeave(${i})">${statusLabel}</span>
+            </div>
+            <div class="item-ctrl-bar">
+              <button class="ctrl-btn" onclick="moveItem(manpowerData, ${i}, -1, renderManpower)">⬆️</button>
+              <button class="ctrl-btn" onclick="moveItem(manpowerData, ${i}, 1, renderManpower)">⬇️</button>
+              <button class="ctrl-btn edit" onclick="editManpower(${i})">✏️ ویرایش</button>
+              <button class="ctrl-btn del" onclick="deleteItem(manpowerData, ${i}, renderManpower)">🗑️</button>
+            </div>
+          </div>
+          <div class="report-title">${i + 1}. ${m.role}</div>
+          <div class="report-meta" style="margin-bottom:0;">توضیحات: ${m.desc || '—'}</div>
+        </div>
+      `}).join('');
+      document.getElementById('cntManpower').textContent = manpowerData.length.toLocaleString('fa-IR');
+    }
+
+    function toggleMpLeave(i) {
+      manpowerData[i].status = manpowerData[i].status === 'مرخصی' ? 'حاضر' : 'مرخصی';
+      renderManpower();
+      showToast(`وضعیت «${manpowerData[i].role}» به ${manpowerData[i].status} تغییر یافت`);
+    }
+
+    function saveManpowerRow() {
+      const role = document.getElementById('inpMpRole').value.trim() || 'نیروی اجرایی کارگاه';
+      const status = document.getElementById('inpMpLeaveStatus') ? document.getElementById('inpMpLeaveStatus').value : 'حاضر';
+      const item = {
+        role,
+        count: parseInt(document.getElementById('inpMpCount').value, 10) || 1,
+        status,
+        desc: document.getElementById('inpMpDesc').value.trim()
+      };
+      if (editingMpIdx > -1) {
+        manpowerData[editingMpIdx] = item;
+        editingMpIdx = -1;
+        document.getElementById('btnSaveMp').textContent = '+ ثبت ردیف نیروی انسانی';
+        showToast('ردیف نیروی انسانی ویرایش شد ✏️');
+      } else {
+        manpowerData.push(item);
+        showToast(`ردیف نیروی انسانی (${status}) اضافه شد 👷`);
+      }
+      document.getElementById('inpMpRole').value = '';
+      document.getElementById('inpMpDesc').value = '';
+      renderManpower();
+    }
+
+    function editManpower(i) {
+      const m = manpowerData[i];
+      editingMpIdx = i;
+      document.getElementById('inpMpRole').value = m.role;
+      document.getElementById('inpMpCount').value = m.count;
+      if (document.getElementById('inpMpLeaveStatus')) {
+        document.getElementById('inpMpLeaveStatus').value = m.status || 'حاضر';
+      }
+      document.getElementById('inpMpDesc').value = m.desc;
+      document.getElementById('btnSaveMp').textContent = '💾 ذخیره تغییرات ردیف #' + (i + 1);
+    }
+
+    // رندر لیست ماشین‌آلات (همراه با نوع مالکیت: شرکتی/استیجاری/پیمانکار + توضیحات دستی + ⬆️ ⬇️ ✏️ 🗑️)
+    function renderMachinery() {
+      const container = document.getElementById('machineryListContainer');
+      container.innerHTML = machineryData.map((m, i) => `
+        <div class="report-item-card">
+          <div class="report-card-top">
+            <div>
+              <span class="unit-tag" style="background: var(--purple-light); color: var(--purple);">🏷️ ${m.owner}</span>
+              <span class="unit-tag" style="background: var(--success-light); color: var(--success);">${m.status} (${m.hours})</span>
+            </div>
+            <div class="item-ctrl-bar">
+              <button class="ctrl-btn" onclick="moveItem(machineryData, ${i}, -1, renderMachinery)">⬆️</button>
+              <button class="ctrl-btn" onclick="moveItem(machineryData, ${i}, 1, renderMachinery)">⬇️</button>
+              <button class="ctrl-btn edit" onclick="editMachinery(${i})">✏️ ویرایش</button>
+              <button class="ctrl-btn del" onclick="deleteItem(machineryData, ${i}, renderMachinery)">🗑️</button>
+            </div>
+          </div>
+          <div class="report-title">${i + 1}. ${m.name}</div>
+          <div class="report-meta" style="margin-bottom:0;">📝 توضیحات: ${m.desc || 'بدون توضیح'}</div>
+        </div>
+      `).join('');
+      document.getElementById('cntMachinery').textContent = machineryData.length.toLocaleString('fa-IR');
+    }
+
+    function saveMachineryRow() {
+      const name = document.getElementById('inpMachName').value.trim() || 'دستگاه راه‌سازی';
+      const item = {
+        name,
+        owner: document.getElementById('inpMachOwner').value,
+        status: document.getElementById('inpMachStatus').value,
+        hours: document.getElementById('inpMachHours').value || '۸ ساعت',
+        desc: document.getElementById('inpMachDesc').value.trim()
+      };
+      if (editingMachIdx > -1) {
+        machineryData[editingMachIdx] = item;
+        editingMachIdx = -1;
+        document.getElementById('btnSaveMach').textContent = '+ ثبت در لیست ماشین‌آلات';
+        showToast('اطلاعات دستگاه ویرایش شد ✏️');
+      } else {
+        machineryData.push(item);
+        showToast('دستگاه با نوع مالکیت و توضیحات ثبت شد 🚜');
+      }
+      document.getElementById('inpMachName').value = '';
+      document.getElementById('inpMachDesc').value = '';
+      renderMachinery();
+    }
+
+    function editMachinery(i) {
+      const m = machineryData[i];
+      editingMachIdx = i;
+      document.getElementById('inpMachName').value = m.name;
+      document.getElementById('inpMachOwner').value = m.owner;
+      document.getElementById('inpMachStatus').value = m.status;
+      document.getElementById('inpMachHours').value = m.hours;
+      document.getElementById('inpMachDesc').value = m.desc;
+      document.getElementById('btnSaveMach').textContent = '💾 ذخیره تغییرات دستگاه #' + (i + 1);
+    }
+
+    // رندر لیست مصالح با دکمه‌های ⬆️ ⬇️ ✏️ 🗑️
+    function renderMaterials() {
+      const container = document.getElementById('materialsListContainer');
+      container.innerHTML = materialsData.map((m, i) => `
+        <div class="report-item-card">
+          <div class="report-card-top">
+            <span class="unit-tag" style="background: var(--teal-light); color: var(--teal);">📦 مقدار: ${m.qty}</span>
+            <div class="item-ctrl-bar">
+              <button class="ctrl-btn" onclick="moveItem(materialsData, ${i}, -1, renderMaterials)">⬆️</button>
+              <button class="ctrl-btn" onclick="moveItem(materialsData, ${i}, 1, renderMaterials)">⬇️</button>
+              <button class="ctrl-btn edit" onclick="editMaterial(${i})">✏️ ویرایش</button>
+              <button class="ctrl-btn del" onclick="deleteItem(materialsData, ${i}, renderMaterials)">🗑️</button>
+            </div>
+          </div>
+          <div class="report-title">${i + 1}. ${m.name}</div>
+          <div class="report-meta" style="margin-bottom:0;">توضیحات: ${m.desc || '—'}</div>
+        </div>
+      `).join('');
+      document.getElementById('cntMaterials').textContent = materialsData.length.toLocaleString('fa-IR');
+    }
+
+    function saveMaterialRow() {
+      const name = document.getElementById('inpMatName').value.trim() || 'مصالح مصرفی';
+      const item = {
+        name,
+        qty: document.getElementById('inpMatQty').value.trim() || '۱۰ واحد',
+        desc: document.getElementById('inpMatDesc').value.trim()
+      };
+      if (editingMatIdx > -1) {
+        materialsData[editingMatIdx] = item;
+        editingMatIdx = -1;
+        document.getElementById('btnSaveMat').textContent = '+ ثبت ردیف مصالح';
+        showToast('ردیف مصالح ویرایش شد ✏️');
+      } else {
+        materialsData.push(item);
+        showToast('ردیف مصالح اضافه شد 📦');
+      }
+      document.getElementById('inpMatName').value = '';
+      document.getElementById('inpMatQty').value = '';
+      document.getElementById('inpMatDesc').value = '';
+      renderMaterials();
+    }
+
+    function editMaterial(i) {
+      const m = materialsData[i];
+      editingMatIdx = i;
+      document.getElementById('inpMatName').value = m.name;
+      document.getElementById('inpMatQty').value = m.qty;
+      document.getElementById('inpMatDesc').value = m.desc;
+      document.getElementById('btnSaveMat').textContent = '💾 ذخیره تغییرات مصالح #' + (i + 1);
+    }
+
+    // توابع عمومی جابجایی بالا/پایین و حذف برای تمامی بخش‌ها
+    function moveItem(arr, index, delta, renderFn) {
+      const target = index + delta;
+      if (target < 0 || target >= arr.length) return;
+      const temp = arr[index];
+      arr[index] = arr[target];
+      arr[target] = temp;
+      renderFn();
+      showToast('ترتیب ردیف جابه‌جا شد ↕️');
+    }
+
+    function deleteItem(arr, index, renderFn) {
+      arr.splice(index, 1);
+      renderFn();
+      showToast('ردیف حذف شد 🗑️');
+    }
+
+    // همگام‌سازی تنظیمات ثابت پروژه و شماره گزارش در کل برنامه
+    function saveFixedSettings() {
+      const proj = document.getElementById('setProjectName').value;
+      const unit = document.getElementById('setFixedUnit').value;
+      const author = document.getElementById('setAuthorName').value;
+      const baseNum = parseInt(document.getElementById('setBaseReportNum').value, 10) || 100;
+
+      document.getElementById('dashProjectName').textContent = proj;
+      document.getElementById('bannerProjTitle').textContent = proj;
+      document.getElementById('pdfProjName').textContent = proj;
+
+      document.getElementById('activeUnitBadge').textContent = unit;
+      document.getElementById('bannerUnit').textContent = unit;
+      document.getElementById('pdfTitleUnit').textContent = 'گزارش روزانه — ' + unit;
+
+      document.getElementById('dashAuthorSub').textContent = `${unit} • سرپرست: ${author} (ثابت در تنظیمات)`;
+      document.getElementById('bannerAuthor').textContent = author;
+      document.getElementById('pdfAuthor').textContent = author;
+
+      if (parseInt(document.getElementById('inpReportNumber').value, 10) < baseNum) {
+        syncReportNumber(baseNum);
+      }
+    }
+
+    function syncReportNumber(val) {
+      const num = parseInt(val, 10) || 100;
+      document.getElementById('inpReportNumber').value = num;
+      const faNum = num.toLocaleString('fa-IR');
+      document.getElementById('topBarReportNo').textContent = 'شماره گزارش: ' + faNum;
+      document.getElementById('kpiCurrentNumber').textContent = 'گزارش #' + faNum;
+      document.getElementById('pdfRepNum').textContent = faNum;
+    }
+
+    function incrementReportNum() {
+      const cur = parseInt(document.getElementById('inpReportNumber').value, 10) || 100;
+      syncReportNumber(cur + 1);
+      showToast('شماره گزارش به ' + (cur + 1) + ' افزایش یافت 🔢');
+    }
+
+    // ناوبری صفحات
+    function switchNav(pageId) {
+      document.querySelectorAll('.screen-page').forEach(p => p.classList.remove('active'));
+      document.getElementById('page-' + pageId).classList.add('active');
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('nav-' + pageId).classList.add('active');
+      document.getElementById('mainFab').style.display = (pageId === 'editor') ? 'none' : 'flex';
+      document.getElementById('mobileViewport').scrollTop = 0;
+    }
+
+    function switchEditorTab(index, tabEl) {
+      document.querySelectorAll('.compose-tab').forEach(t => t.classList.remove('active'));
+      if (tabEl) tabEl.classList.add('active');
+      document.querySelectorAll('.editor-step-pane').forEach((pane, i) => {
+        pane.classList.toggle('active', i === index);
+      });
+    }
+
+    function autoFormatKm(input) {
+      let digits = input.value.replace(/[^\d]/g, '');
+      if (digits.length > 3) {
+        input.value = digits.slice(0, digits.length - 3) + '+' + digits.slice(-3);
+      }
+    }
+
+    function calcKmDiff() {
+      const parseKm = v => {
+        if (!v) return null;
+        if (v.includes('+')) {
+          const [k, m] = v.split('+');
+          return (parseInt(k||'0',10)*1000) + parseInt(m||'0',10);
+        }
+        return parseInt(v.replace(/[^\d]/g,''), 10) || null;
+      };
+      const s = parseKm(document.getElementById('inpStartKm').value);
+      const e = parseKm(document.getElementById('inpEndKm').value);
+      if (s !== null && e !== null) {
+        const d = Math.abs(e - s);
+        document.getElementById('kmDiffText').textContent = d + ' m';
+        document.getElementById('inpTaskQty').value = d;
+      }
+    }
+
+    function copyFromYesterday() {
+      switchNav('editor');
+      showToast('لیست نیروها، ماشین‌آلات و برنامه دیروز به گزارش امروز کپی شد ⚡');
+    }
+
+    function refreshWeather() {
+      showToast('وضعیت آب‌وهوا از موقعیت GPS بروزرسانی شد 🌤️');
+    }
+
+    function addDemoPhoto(slot) {
+      const repNo = document.getElementById('inpReportNumber').value;
+      slot.classList.add('filled');
+      slot.innerHTML = `
+        <span style="font-size: 20px;">📸</span>
+        <span>بتن‌ریزی حوضچه شیر</span>
+        <div class="photo-watermark">1405/07/27 | #${repNo} | KM 12+820</div>
+      `;
+      showToast('عکس با واترمارک کارگاهی برای ۱ ماه در دیتابیس ذخیره شد 📷');
+    }
+
+    function saveReportFinal() {
+      const cur = parseInt(document.getElementById('inpReportNumber').value, 10) || 100;
+      showToast(`گزارش شماره ${cur} با امضای ثابت ذخیره شد ✅ (شماره بعدی: ${cur + 1})`);
+    }
+
+    // بوم امضای ثابت در تنظیمات
+    const canvas = document.getElementById('sigCanvas');
+    const ctx = canvas.getContext('2d');
+    let drawing = false;
+    ctx.strokeStyle = '#1d4ed8';
+    ctx.lineWidth = 2.4;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(70, 70); ctx.bezierCurveTo(120, 20, 190, 90, 250, 35); ctx.stroke();
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const cx = e.touches ? e.touches[0].clientX : e.clientX;
+      const cy = e.touches ? e.touches[0].clientY : e.clientY;
+      return { x: cx - rect.left, y: cy - rect.top };
+    }
+    canvas.addEventListener('mousedown', e => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
+    canvas.addEventListener('mousemove', e => { if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
+    window.addEventListener('mouseup', () => { drawing = false; });
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
+    canvas.addEventListener('touchmove', e => { e.preventDefault(); if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
+    canvas.addEventListener('touchend', () => { drawing = false; });
+
+    function clearSignature() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      showToast('بوم امضای ثابت پاک شد');
+    }
+
+    function filterByUnitChip(unit, chipEl) {
+      chipEl.parentElement.querySelectorAll('.unit-chip').forEach(c => c.classList.remove('active'));
+      chipEl.classList.add('active');
+      document.querySelectorAll('#archiveCardsWrapper .report-item-card').forEach(card => {
+        card.style.display = (unit === 'ALL' || card.dataset.unit === unit) ? 'block' : 'none';
+      });
+    }
+
+    function filterArchiveList() {
+      const q = document.getElementById('archiveSearchInput').value.trim();
+      document.querySelectorAll('#archiveCardsWrapper .report-item-card').forEach(card => {
+        card.style.display = card.innerText.includes(q) ? 'block' : 'none';
+      });
+    }
+
+    function openFilterSheet() { document.getElementById('filterSheet').classList.add('open'); }
+    function openPdfSheet() { document.getElementById('pdfSheet').classList.add('open'); }
+    function openDatePickerSheet() { document.getElementById('datePickerSheet').classList.add('open'); }
+    function openLogoSheet() { document.getElementById('logoSheet').classList.add('open'); }
+    function closeAllSheets() { document.querySelectorAll('.sheet-backdrop').forEach(s => s.classList.remove('open')); }
+    function closeSheets(e) { if (e.target.classList.contains('sheet-backdrop')) closeAllSheets(); }
+
+    function applySheetFilter() {
+      const u = document.getElementById('sheetUnitFilter').value;
+      document.querySelectorAll('#archiveCardsWrapper .report-item-card').forEach(card => {
+        card.style.display = (u === 'ALL' || card.dataset.unit === u) ? 'block' : 'none';
+      });
+      closeAllSheets();
+    }
+
+    function confirmPersianDate() {
+      const y = document.getElementById('pickYear').value;
+      const m = document.getElementById('pickMonth').value;
+      const d = document.getElementById('pickDay').value;
+      document.getElementById('inpReportDate').value = `${y}/${m}/${d}`;
+      closeAllSheets();
+    }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const t = document.getElementById('androidToast');
+      t.textContent = msg;
+      t.style.display = 'block';
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { t.style.display = 'none'; }, 2400);
+    }
+
+    // رندر اولیه تمام لیست‌ها
+    renderTasks();
+    renderManpower();
+    renderMachinery();
+    renderMaterials();
+  </script>
+</body>
+</html>

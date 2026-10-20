@@ -65,10 +65,30 @@ fun PersianDatePickerDialog(
     onDateSelected: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val parts = initialDate.split("/")
-    var selectedYear by remember { mutableStateOf(if (parts.size == 3) parts[0].toIntOrNull() ?: 1403 else 1403) }
-    var selectedMonth by remember { mutableStateOf(if (parts.size == 3) parts[1].toIntOrNull() ?: 1 else 1) }
-    var selectedDay by remember { mutableStateOf(if (parts.size == 3) parts[2].toIntOrNull() ?: 1 else 1) }
+    fun toEnglishDigits(str: String): String {
+        val persianDigits = charArrayOf('۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹')
+        var res = str
+        for (i in 0..9) {
+            res = res.replace(persianDigits[i], ('0' + i))
+        }
+        return res
+    }
+
+    fun toPersianDigits(num: Int, padLength: Int = 0): String {
+        val persianDigits = charArrayOf('۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹')
+        val padded = if (padLength > 0) num.toString().padStart(padLength, '0') else num.toString()
+        val sb = StringBuilder()
+        for (ch in padded) {
+            if (ch in '0'..'9') sb.append(persianDigits[ch - '0']) else sb.append(ch)
+        }
+        return sb.toString()
+    }
+
+    val normalizedInitial = toEnglishDigits(initialDate)
+    val parts = normalizedInitial.split("/")
+    var selectedYear by remember { mutableStateOf(if (parts.size == 3) parts[0].toIntOrNull() ?: 1405 else 1405) }
+    var selectedMonth by remember { mutableStateOf((if (parts.size == 3) parts[1].toIntOrNull() ?: 1 else 1).coerceIn(1, 12)) }
+    var selectedDay by remember { mutableStateOf((if (parts.size == 3) parts[2].toIntOrNull() ?: 1 else 1).coerceIn(1, 31)) }
 
     var isMonthSelectionMode by remember { mutableStateOf(false) }
 
@@ -80,7 +100,8 @@ fun PersianDatePickerDialog(
     )
 
     fun isLeapYear(year: Int): Boolean {
-        return (year == 1403 || year == 1407 || year == 1411 || year == 1399 || (year - 1399) % 4 == 0)
+        val rem = year % 33
+        return rem in intArrayOf(1, 5, 9, 13, 17, 22, 26, 30)
     }
 
     fun getStartDayOfWeek(year: Int, month: Int): Int {
@@ -102,6 +123,7 @@ fun PersianDatePickerDialog(
 
     val jDaysInMonth = intArrayOf(31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, if (isLeapYear(selectedYear)) 30 else 29)
     val daysInCurrentMonth = jDaysInMonth[selectedMonth - 1]
+    if (selectedDay > daysInCurrentMonth) selectedDay = daysInCurrentMonth
     val startDay = getStartDayOfWeek(selectedYear, selectedMonth)
 
     Dialog(onDismissRequest = onDismiss) {
@@ -121,7 +143,7 @@ fun PersianDatePickerDialog(
                         Icon(Icons.Default.KeyboardArrowRight, contentDescription = "Next Year")
                     }
                     Text(
-                        text = selectedYear.toString(),
+                        text = toPersianDigits(selectedYear),
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp
                     )
@@ -216,7 +238,7 @@ fun PersianDatePickerDialog(
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Text(
-                                                text = day.toString(),
+                                                text = toPersianDigits(day),
                                                 color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                                             )
                                         }
@@ -236,9 +258,10 @@ fun PersianDatePickerDialog(
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(onClick = { 
-                        val mStr = selectedMonth.toString().padStart(2, '0')
-                        val dStr = selectedDay.toString().padStart(2, '0')
-                        onDateSelected("$selectedYear/$mStr/$dStr") 
+                        val yStr = toPersianDigits(selectedYear)
+                        val mStr = toPersianDigits(selectedMonth, 2)
+                        val dStr = toPersianDigits(selectedDay, 2)
+                        onDateSelected("$yStr/$mStr/$dStr") 
                     }) {
                         Text("تایید")
                     }
@@ -258,6 +281,7 @@ fun BaseInfoTabRedesigned(
     val context = LocalContext.current
     var showWeatherPicker by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var reportNumText by remember(report.reportNumber) { mutableStateOf(report.reportNumber.toString()) }
     val customUnitTitle = remember { viewModel.sharedPreferences.getString("custom_unit_title", "سایر واحدها") ?: "سایر واحدها" }
     val unitLabel = when (report.reportType) {
         "WAREHOUSE" -> "انبار"
@@ -287,7 +311,86 @@ fun BaseInfoTabRedesigned(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Main Info Card
+        // Fixed Project Profile Card (Read from Settings)
+        Card(
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "🔒 مشخصات ثابت پروژه (تنظیم‌شده در تنظیمات)",
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "گزارش #${report.reportNumber}",
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFFD97706)
+                    )
+                }
+                Text(
+                    text = "پروژه: ${report.projectTitle.ifBlank { "پروژه عمرانی" }}",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "واحد گزارش‌دهنده: $unitLabel (${report.sectionName.ifBlank { unitLabel }})",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "مسئول: ${report.preparedBy.ifBlank { "سرپرست کارگاه" }}",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        // Smart Copy from Yesterday Button
+        OutlinedButton(
+            onClick = {
+                viewModel.copyFromYesterdayReport { _, msg ->
+                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(1.5.dp, Color(0xFFD97706)),
+            colors = ButtonDefaults.outlinedButtonColors(
+                containerColor = Color(0xFFD97706).copy(alpha = 0.1f),
+                contentColor = Color(0xFFD97706)
+            )
+        ) {
+            Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "⚡ کپی هوشمند از گزارش دیروز (نفرات، ماشین‌آلات و فعالیت‌ها)",
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp
+            )
+        }
+
+        // Main Info Card (Only Date, Auto-incrementing Report Number, and Weather)
         Card(
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -300,42 +403,60 @@ fun BaseInfoTabRedesigned(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Text(
-                    text = "مشخصات پایه گزارش روزانه 📋",
+                    text = "مشخصات روزانه گزارش 📋",
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
                     color = Color(0xFF00695C)
                 )
 
-                Text(
-                    text = "بخش جاری: $unitLabel",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                // 1. Report Date & Report Number Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedTextField(
+                        value = report.date,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("تاریخ گزارش", fontSize = 11.sp) },
+                        trailingIcon = {
+                            Icon(
+                                Icons.Default.DateRange,
+                                contentDescription = "انتخاب تاریخ",
+                                modifier = Modifier.clickable { showDatePicker = true }
+                            )
+                        },
+                        modifier = Modifier
+                            .weight(1.3f)
+                            .clickable { showDatePicker = true },
+                        enabled = false,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                            disabledBorderColor = MaterialTheme.colorScheme.outline,
+                            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            disabledTrailingIconColor = MaterialTheme.colorScheme.primary
+                        ),
+                        shape = RoundedCornerShape(16.dp),
+                        singleLine = true
+                    )
 
-                // 1. Report Date
-                OutlinedTextField(
-                    value = report.date,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("تاریخ گزارش") },
-                    trailingIcon = {
-                        Icon(
-                            Icons.Default.DateRange,
-                            contentDescription = "انتخاب تاریخ",
-                            modifier = Modifier.clickable { showDatePicker = true }
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth().clickable { showDatePicker = true },
-                    enabled = false,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                        disabledBorderColor = MaterialTheme.colorScheme.outline,
-                        disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        disabledTrailingIconColor = MaterialTheme.colorScheme.primary
-                    ),
-                    shape = RoundedCornerShape(16.dp)
-                )
+                    OutlinedTextField(
+                        value = reportNumText,
+                        onValueChange = { newVal ->
+                            reportNumText = newVal
+                            val parsed = newVal.toIntOrNull()
+                            if (parsed != null && parsed > 0) {
+                                viewModel.updateCurrentReport { it.copy(reportNumber = parsed) }
+                            }
+                        },
+                        label = { Text("شماره گزارش (خودکار)", fontSize = 11.sp) },
+                        leadingIcon = { Text("#", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(16.dp),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true
+                    )
+                }
 
                 // 2. Weather Row Selection
                 Button(
@@ -1544,26 +1665,51 @@ fun ManpowerTabRedesigned(
                     singleLine = true
                 )
 
-                // 6. Vacation / Leave checkbox
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .clickable { isOnLeave = !isOnLeave }
-                        .padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Checkbox(
-                        checked = isOnLeave,
-                        onCheckedChange = { isOnLeave = it }
-                    )
+                // 6. Attendance Status (Present vs On Leave) segmented chips
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = "این فرد در مرخصی است ✈️ (بدون محاسبه در آمار فعالان)",
+                        text = "وضعیت حضور پرسنل:",
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
+                        fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = !isOnLeave,
+                            onClick = { isOnLeave = false },
+                            label = {
+                                Text(
+                                    text = "✅ حاضر در کارگاه",
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Color(0xFF16A34A).copy(alpha = 0.16f),
+                                selectedLabelColor = Color(0xFF16A34A)
+                            ),
+                            modifier = Modifier.weight(1f)
+                        )
+                        FilterChip(
+                            selected = isOnLeave,
+                            onClick = { isOnLeave = true },
+                            label = {
+                                Text(
+                                    text = "🏖️ مرخصی (عدم حضور)",
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Color(0xFFD97706).copy(alpha = 0.16f),
+                                selectedLabelColor = Color(0xFFD97706)
+                            ),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
 
                 // Large Submit Button
@@ -1717,20 +1863,37 @@ fun ManpowerTabRedesigned(
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             Text("سمت: ${item.role.ifEmpty { "نا مشخص" }}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("تعداد حاضرین: ${item.count} نفر", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("تعداد: ${item.count} نفر", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             val typeLabel = if (item.employmentType == "COMPANY") "شرکتی (امانی)" else "پیمانکار"
                             Text("نوع استخدام: $typeLabel", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                             
-                            if (item.isOnLeave) {
-                                Text("وضعیت: در مرخصی ✈️", fontSize = 11.sp, color = Color(0xFFDC2626), fontWeight = FontWeight.Bold)
-                            } else {
-                                Text("وضعیت: حاضر در کارگاه ✅", fontSize = 11.sp, color = Color(0xFF16A34A), fontWeight = FontWeight.Bold)
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (item.isOnLeave) Color(0xFFD97706).copy(alpha = 0.14f) else Color(0xFF16A34A).copy(alpha = 0.14f),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (item.isOnLeave) Color(0xFFD97706).copy(alpha = 0.4f) else Color(0xFF16A34A).copy(alpha = 0.4f)
+                                ),
+                                modifier = Modifier.clickable {
+                                    val updated = report.manpower.toMutableList()
+                                    updated[index] = item.copy(isOnLeave = !item.isOnLeave)
+                                    viewModel.updateCurrentReport { r -> r.copy(manpower = updated) }
+                                }
+                            ) {
+                                Text(
+                                    text = if (item.isOnLeave) "🏖️ در مرخصی (تغییر با لمس)" else "✅ حاضر در کارگاه (تغییر با لمس)",
+                                    fontSize = 10.5.sp,
+                                    color = if (item.isOnLeave) Color(0xFFD97706) else Color(0xFF16A34A),
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
                             }
                         }
 
@@ -1797,9 +1960,10 @@ fun PhotoGalleryTabRedesigned(
         }
         
         Text(
-            text = "توجه: تصاویر فقط برای پیوست در فایل PDF استفاده می‌شوند و در حافظه برنامه ذخیره نمی‌گردند.",
+            text = "📌 ذخیره‌سازی ۱ ماهه در دیتابیس محلی همراه با درج خودکار واترمارک کارگاهی (پروژه، شماره گزارش #${report.reportNumber}، تاریخ و کیلومتراژ)",
             fontSize = 11.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )

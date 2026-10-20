@@ -10,6 +10,18 @@ class ReportRepository(private val dailyReportDao: DailyReportDao) {
         return dailyReportDao.getReportById(id)
     }
 
+    suspend fun getMaxReportNumber(): Int? {
+        return dailyReportDao.getMaxReportNumber()
+    }
+
+    suspend fun getLatestReport(): DailyReport? {
+        return dailyReportDao.getLatestReport()
+    }
+
+    suspend fun getExistingReport(date: String, section: String, project: String): DailyReport? {
+        return dailyReportDao.getExistingReport(date, section, project)
+    }
+
     suspend fun insertReport(report: DailyReport): Long {
         return dailyReportDao.insertReport(report)
     }

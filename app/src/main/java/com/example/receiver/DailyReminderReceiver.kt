@@ -136,46 +136,60 @@ class DailyReminderReceiver : BroadcastReceiver() {
     }
 
     private fun getTodayPersianDate(): String {
-        val calendar = Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Tehran"))
+        val calendar = java.util.GregorianCalendar(java.util.TimeZone.getTimeZone("Asia/Tehran"), java.util.Locale.US)
         val gy = calendar.get(Calendar.YEAR)
         val gm = calendar.get(Calendar.MONTH) + 1
         val gd = calendar.get(Calendar.DAY_OF_MONTH)
-        
-        val gDaysInMonth = intArrayOf(0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
-        var gDayNo = 365 * (gy - 1867) + (gy - 1867) / 4 - (gy - 1867) / 100 + (gy - 1867) / 400
-        for (i in 1 until gm) {
+
+        val gDaysInMonth = intArrayOf(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+        val jDaysInMonth = intArrayOf(31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29)
+
+        val gy2 = gy - 1600
+        val gm2 = gm - 1
+        val gd2 = gd - 1
+
+        var gDayNo = 365 * gy2 + (gy2 + 3) / 4 - (gy2 + 99) / 100 + (gy2 + 399) / 400
+        for (i in 0 until gm2) {
             gDayNo += gDaysInMonth[i]
         }
-        if (gm > 2 && ((gy % 4 == 0 && gy % 100 != 0) || (gy % 400 == 0))) {
+        if (gm2 > 1 && ((gy % 4 == 0 && gy % 100 != 0) || (gy % 400 == 0))) {
             gDayNo++
         }
-        gDayNo += gd - 1
-        var jDayNo = gDayNo - 737242
+        gDayNo += gd2
+
+        var jDayNo = gDayNo - 79
         val jNP = jDayNo / 12053
         jDayNo %= 12053
+
         var jy = 979 + 33 * jNP + 4 * (jDayNo / 1461)
         jDayNo %= 1461
+
         if (jDayNo >= 366) {
             jy += (jDayNo - 1) / 365
             jDayNo = (jDayNo - 1) % 365
         }
-        val jm: Int
-        val jd: Int
-        if (jDayNo < 186) {
-            jm = 1 + jDayNo / 31
-            jd = 1 + jDayNo % 31
-        } else {
-            jm = 7 + (jDayNo - 186) / 30
-            jd = 1 + (jDayNo - 186) % 30
+
+        val leapRemainders = intArrayOf(1, 5, 9, 13, 17, 22, 26, 30)
+        val isLeap = leapRemainders.contains(jy % 33)
+
+        var jm = 0
+        while (jm < 12) {
+            val daysInM = if (jm == 11 && isLeap) 30 else jDaysInMonth[jm]
+            if (jDayNo >= daysInM) {
+                jDayNo -= daysInM
+                jm++
+            } else {
+                break
+            }
         }
-        
+
         fun toPersianDigits(num: Int): String {
             val persianDigits = charArrayOf('۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹')
-            val str = num.toString()
-            return str.map { c -> if (c.isDigit()) persianDigits[c - '0'] else c }.joinToString("")
+            val numStr = if (num < 10) "0$num" else num.toString()
+            return numStr.map { c -> if (c.isDigit()) persianDigits[c - '0'] else c }.joinToString("")
         }
-        
-        return "${toPersianDigits(jy)}/${toPersianDigits(jm)}/${toPersianDigits(jd)}"
+
+        return "${toPersianDigits(jy)}/${toPersianDigits(jm + 1)}/${toPersianDigits(jDayNo + 1)}"
     }
 
     companion object {

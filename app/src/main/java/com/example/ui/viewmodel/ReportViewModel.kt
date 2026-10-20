@@ -43,7 +43,25 @@ class ReportViewModel(
 
     fun addTemporaryPhoto(context: android.content.Context, uri: android.net.Uri) {
         viewModelScope.launch(Dispatchers.IO) {
-            val cachedPath = com.example.util.PhotoCacheManager.savePhotoToCache(context, uri)
+            val rep = _currentReport.value
+            val projectTitle = rep?.project?.ifBlank {
+                sharedPreferences.getString("default_project", "پروژه عمرانی") ?: "پروژه عمرانی"
+            } ?: (sharedPreferences.getString("default_project", "پروژه عمرانی") ?: "پروژه عمرانی")
+            val reportDate = rep?.date?.ifBlank { getTodayPersianDate() } ?: getTodayPersianDate()
+            val reportNum = rep?.reportNumber ?: 100
+            val kmInfo = if (!rep?.startKm.isNullOrBlank() || !rep?.endKm.isNullOrBlank()) {
+                "KM ${rep?.startKm ?: ""} - ${rep?.endKm ?: ""}"
+            } else ""
+
+            val cachedPath = com.example.util.PhotoCacheManager.savePhotoToCache(
+                context = context,
+                sourceUri = uri,
+                projectTitle = projectTitle,
+                reportDate = reportDate,
+                reportNumber = reportNum,
+                kmInfo = kmInfo,
+                applyWatermark = true
+            )
             if (cachedPath != null) {
                 // Ensure we create a valid file URI scheme so Coil can load it smoothly
                 val localUri = "file://$cachedPath"
@@ -229,76 +247,61 @@ class ReportViewModel(
 
     val backupRestoredEvent = MutableStateFlow(0)
 
-    init {
-        // Auto-save pipeline with debounce to prevent database write spam during typing
-        _currentReport
-            .filterNotNull()
-            .debounce(2000) // Debounce 2 seconds of inactivity
-            .distinctUntilChanged()
-            .onEach { report ->
-                if (report.id != 0 || report.project.isNotEmpty() || report.preparedBy.isNotEmpty()) {
-                    _isSaving.value = true
-                    val insertedId = repository.insertReport(report)
-                    if (report.id == 0 && insertedId > 0) {
-                        // Keep track of the generated Room ID for future updates instead of inserting a new row
-                        _currentReport.value = report.copy(id = insertedId.toInt())
-                    }
-                    val todayDate = getTodayPersianDate()
-                    if (report.date == todayDate) {
-                        sharedPreferences.edit().putString("last_reported_date", todayDate).apply()
-                    }
-                    _isSaving.value = false
-                }
-            }
-            .launchIn(viewModelScope)
-    }
+    private val saveMutex = kotlinx.coroutines.sync.Mutex()
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
     }
 
-    // Force an immediate manual save
+    // Force an immediate manual save (protected by Mutex to avoid duplicate insertions when id == 0)
     fun saveCurrentReportImmediately() {
-        var report = _currentReport.value ?: return
-        report = report.copy(photos = getSerializedPhotos())
-        _currentReport.value = report // Keep UI synced
-        
         viewModelScope.launch {
-            _isSaving.value = true
-            val insertedId = repository.insertReport(report)
-            if (report.id == 0 && insertedId > 0) {
-                _currentReport.value = report.copy(id = insertedId.toInt())
+            saveMutex.lock()
+            try {
+                var report = _currentReport.value ?: return@launch
+                report = report.copy(photos = getSerializedPhotos())
+                _currentReport.value = report // Keep UI synced
+
+                _isSaving.value = true
+                val insertedId = repository.insertReport(report)
+                if (report.id == 0 && insertedId > 0) {
+                    _currentReport.value = report.copy(id = insertedId.toInt())
+                }
+                val todayDate = getTodayPersianDate()
+                if (report.date == todayDate) {
+                    sharedPreferences.edit().putString("last_reported_date", todayDate).apply()
+                }
+                _isSaving.value = false
+            } finally {
+                saveMutex.unlock()
             }
-            val todayDate = getTodayPersianDate()
-            if (report.date == todayDate) {
-                sharedPreferences.edit().putString("last_reported_date", todayDate).apply()
-            }
-            _isSaving.value = false
         }
     }
 
-    fun startNewReport(type: String) {
+    fun startNewReport(type: String = "") {
         clearTemporaryPhotos()
+        val resolvedType = if (type.isBlank() || type == "DEFAULT") {
+            sharedPreferences.getString("default_report_type", "EXECUTION") ?: "EXECUTION"
+        } else {
+            type
+        }
+
         // SharedPreferences settings with sensible fallbacks
         val defaultProject = sharedPreferences.getString("default_project", "") ?: ""
-            
         val defaultPreparedBy = sharedPreferences.getString("default_prepared_by", "") ?: ""
-            
         val customUnitTitle = sharedPreferences.getString("custom_unit_title", "سایر واحدها") ?: "سایر واحدها"
-        val defaultSection = when (type) {
+        val defaultSection = when (resolvedType) {
             "WAREHOUSE" -> "انبار"
             "LEGAL" -> "حقوقی"
             "SURVEY" -> "نقشه‌برداری"
             "TECHNICAL" -> "فنی"
             "HSE" -> "ایمنی"
             "CUSTOM" -> customUnitTitle
-            else -> "اجرا"
+            else -> sharedPreferences.getString("default_section", "اجرا")?.ifBlank { "اجرا" } ?: "اجرا"
         }
-            
+
         val defaultStartKm = sharedPreferences.getString("default_start_km", "") ?: ""
-            
         val defaultEndKm = sharedPreferences.getString("default_end_km", "") ?: ""
-            
         var defaultWeather = sharedPreferences.getString("default_weather", "") ?: ""
 
         val weatherAutoUpdate = sharedPreferences.getBoolean("weather_auto_update", true)
@@ -322,25 +325,71 @@ class ReportViewModel(
         }
 
         val todayPersian = getTodayPersianDate()
-        
-        _currentReport.value = DailyReport(
-            project = defaultProject,
-            preparedBy = defaultPreparedBy,
-            section = defaultSection,
-            startKm = defaultStartKm,
-            endKm = defaultEndKm,
-            date = todayPersian,
-            weather = defaultWeather,
-            reportType = type
-        )
-        saveCurrentReportImmediately()
+        val baseNumStr = sharedPreferences.getString("base_report_number", "100") ?: "100"
+        val baseNum = baseNumStr.filter { it.isDigit() }.toIntOrNull() ?: 100
+
+        viewModelScope.launch {
+            val maxExisting = repository.getMaxReportNumber() ?: (baseNum - 1)
+            val nextReportNumber = maxOf(baseNum, maxExisting + 1)
+
+            _currentReport.value = DailyReport(
+                reportNumber = nextReportNumber,
+                project = defaultProject,
+                preparedBy = defaultPreparedBy,
+                section = defaultSection,
+                startKm = defaultStartKm,
+                endKm = defaultEndKm,
+                date = todayPersian,
+                weather = defaultWeather,
+                reportType = resolvedType
+            )
+            saveCurrentReportImmediately()
+        }
+    }
+
+    // Smart Copy from Yesterday's / Previous Report
+    fun copyFromYesterdayReport(onResult: (Boolean, String) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            val current = _currentReport.value
+            val previous = allReports.value.firstOrNull { it.id != (current?.id ?: 0) }
+                ?: repository.getLatestReport()?.takeIf { it.id != (current?.id ?: 0) }
+
+            if (previous == null) {
+                onResult(false, "گزارش قبلی برای کپی هوشمند یافت نشد!")
+                return@launch
+            }
+
+            if (current != null) {
+                val updated = current.copy(
+                    startKm = current.startKm.ifBlank { previous.startKm },
+                    endKm = current.endKm.ifBlank { previous.endKm },
+                    tasks = previous.tasks.map { it.copy() },
+                    machinery = previous.machinery.map { it.copy() },
+                    manpower = previous.manpower.map { it.copy() },
+                    materials = previous.materials.map { it.copy() },
+                    legalPermits = previous.legalPermits.map { it.copy() },
+                    tomorrowPlan = current.tomorrowPlan.ifBlank { previous.tomorrowPlan }
+                )
+                _currentReport.value = updated
+                saveCurrentReportImmediately()
+                onResult(true, "اطلاعات از گزارش #${previous.reportNumber} (${previous.date}) با موفقیت کپی شد ✅")
+            } else {
+                onResult(false, "ابتدا یک گزارش باز کنید")
+            }
+        }
     }
 
     // Duplicate an existing report with today's date so user doesn't re-enter data
     fun duplicateReport(report: DailyReport) {
         viewModelScope.launch {
+            val baseNumStr = sharedPreferences.getString("base_report_number", "100") ?: "100"
+            val baseNum = baseNumStr.filter { it.isDigit() }.toIntOrNull() ?: 100
+            val maxExisting = repository.getMaxReportNumber() ?: (baseNum - 1)
+            val nextReportNumber = maxOf(baseNum, maxExisting + 1)
+
             val duplicatedReport = report.copy(
                 id = 0, // Auto-generate new Room ID
+                reportNumber = nextReportNumber,
                 date = getTodayPersianDate(),
                 createdAt = System.currentTimeMillis()
             )
@@ -428,20 +477,17 @@ class ReportViewModel(
             jDayNo = (jDayNo - 1) % 365
         }
         
+        val leapRemainders = intArrayOf(1, 5, 9, 13, 17, 22, 26, 30)
+        val isLeap = leapRemainders.contains(jy % 33)
+
         var jm = 0
-        while (jm < 12 && jDayNo >= jDaysInMonth[jm]) {
-            if (jm == 11) {
-                val isLeap = (jy == 1403 || jy == 1407 || jy == 1411 || jy == 1399 || (jy - 1399) % 4 == 0)
-                val esfandDays = if (isLeap) 30 else 29
-                if (jDayNo >= esfandDays) {
-                    jDayNo -= esfandDays
-                    jm++
-                } else {
-                    break
-                }
-            } else {
-                jDayNo -= jDaysInMonth[jm]
+        while (jm < 12) {
+            val daysInM = if (jm == 11 && isLeap) 30 else jDaysInMonth[jm]
+            if (jDayNo >= daysInM) {
+                jDayNo -= daysInM
                 jm++
+            } else {
+                break
             }
         }
         return intArrayOf(jy, jm + 1, jDayNo + 1)
@@ -476,7 +522,8 @@ class ReportViewModel(
         reportType: String,
         weather: String,
         startKm: String,
-        endKm: String
+        endKm: String,
+        baseReportNumber: String = "100"
     ) {
         sharedPreferences.edit().apply {
             putString("default_project", project)
@@ -486,6 +533,7 @@ class ReportViewModel(
             putString("default_weather", weather)
             putString("default_start_km", startKm)
             putString("default_end_km", endKm)
+            putString("base_report_number", baseReportNumber.ifBlank { "100" })
             apply()
         }
     }
@@ -507,7 +555,7 @@ class ReportViewModel(
                 override fun onPageFinished(view: WebView?, url: String?) {
                     try {
                         val printManager = context.getSystemService(Context.PRINT_SERVICE) as android.print.PrintManager
-                        val jobName = "CivilSync_${report.project.replace(" ", "_")}_${report.date.replace("/", "-")}"
+                        val jobName = "BuildReport_${report.reportNumber}_${report.date.replace("/", "-")}"
                         val printAdapter = webView.createPrintDocumentAdapter(jobName)
                         
                         // Action: Starts native PDF Preview, Export & Print flow
@@ -525,7 +573,7 @@ class ReportViewModel(
                     }
                 }
             }
-            webView.loadDataWithBaseURL(null, htmlContent, "text/html", "utf-8", null)
+            webView.loadDataWithBaseURL("file:///android_res/", htmlContent, "text/html", "utf-8", null)
         }
     }
 
@@ -544,7 +592,7 @@ class ReportViewModel(
             webView.webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
                     try {
-                        val jobName = "CivilSync_${report.project.replace(" ", "_")}_${report.date.replace("/", "-")}"
+                        val jobName = "BuildReport_${report.reportNumber}_${report.date.replace("/", "-")}"
                         val printAdapter = webView.createPrintDocumentAdapter(jobName)
                         
                         // Output pdf file in cache directory
@@ -559,7 +607,7 @@ class ReportViewModel(
                             else -> "گزارش اجرا"
                         }
                         val cleanDateStr = report.date.replace("/", ".")
-                        val outputPdfFile = File(cacheDir, "$sectionName - $cleanDateStr.pdf")
+                        val outputPdfFile = File(cacheDir, "$sectionName #${report.reportNumber} - $cleanDateStr.pdf")
                         if (outputPdfFile.exists()) {
                             outputPdfFile.delete()
                         }
@@ -580,19 +628,20 @@ class ReportViewModel(
                     }
                 }
             }
-            webView.loadDataWithBaseURL(null, htmlContent, "text/html", "utf-8", null)
+            webView.loadDataWithBaseURL("file:///android_res/", htmlContent, "text/html", "utf-8", null)
         }
     }
 
     // Export all reports as a pretty JSON string
     fun exportBackup(): String {
         val rootObj = org.json.JSONObject()
-        rootObj.put("backup_version", 2)
+        rootObj.put("backup_version", 3)
         
         // Reports List
         val rootArray = org.json.JSONArray()
         for (report in allReports.value) {
             val reportObj = org.json.JSONObject().apply {
+                put("reportNumber", report.reportNumber)
                 put("project", report.project)
                 put("section", report.section)
                 put("date", report.date)
@@ -605,12 +654,14 @@ class ReportViewModel(
                 put("tomorrowPlan", report.tomorrowPlan)
                 put("reportType", report.reportType)
 
-                // Tasks array
+                // Tasks array (including startKm and endKm)
                 val tasksArray = org.json.JSONArray()
                 for (task in report.tasks) {
                     tasksArray.put(org.json.JSONObject().apply {
                         put("description", task.description)
                         put("location", task.location)
+                        put("startKm", task.startKm)
+                        put("endKm", task.endKm)
                         put("quantity", task.quantity)
                         put("unit", task.unit)
                         put("accumulativeQuantity", task.accumulativeQuantity)
@@ -676,6 +727,13 @@ class ReportViewModel(
                     })
                 }
                 put("legalPermits", legalArray)
+
+                // Photos array
+                val photosArray = org.json.JSONArray()
+                for (photoJson in report.photos) {
+                    photosArray.put(photoJson)
+                }
+                put("photos", photosArray)
             }
             rootArray.put(reportObj)
         }
@@ -686,7 +744,8 @@ class ReportViewModel(
             val stringKeys = listOf(
                 "default_project", "default_section", "default_prepared_by", "default_weather",
                 "custom_unit_title", "default_start_km", "default_end_km", "default_report_type",
-                "user_signature", "app_theme", "dashboard_recent_activities", "dashboard_tomorrow_forecast"
+                "base_report_number", "user_signature", "app_theme", "dashboard_recent_activities",
+                "dashboard_tomorrow_forecast", "weather_city_name"
             )
             for (key in stringKeys) {
                 put(key, sharedPreferences.getString(key, ""))
@@ -710,7 +769,7 @@ class ReportViewModel(
         return rootObj.toString(2)
     }
 
-    // Import reports from a JSON string and merge them into the repository
+    // Import reports from a JSON string and merge them into the repository (with deduplication)
     fun importBackup(jsonString: String, onSuccess: (Int) -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
@@ -735,7 +794,8 @@ class ReportViewModel(
                     val stringKeys = listOf(
                         "default_project", "default_section", "default_prepared_by", "default_weather",
                         "custom_unit_title", "default_start_km", "default_end_km", "default_report_type",
-                        "user_signature", "app_theme", "dashboard_recent_activities", "dashboard_tomorrow_forecast"
+                        "base_report_number", "user_signature", "app_theme", "dashboard_recent_activities",
+                        "dashboard_tomorrow_forecast", "weather_city_name"
                     )
                     for (key in stringKeys) {
                         if (settingsObj.has(key)) {
@@ -770,7 +830,7 @@ class ReportViewModel(
                 for (i in 0 until reportsArray.length()) {
                     val obj = reportsArray.getJSONObject(i)
                     
-                    // Parse tasks
+                    // Parse tasks (including startKm and endKm)
                     val tasksList = mutableListOf<TaskEntry>()
                     val tasksArray = obj.optJSONArray("tasks")
                     if (tasksArray != null) {
@@ -779,6 +839,8 @@ class ReportViewModel(
                             tasksList.add(TaskEntry(
                                 description = taskObj.optString("description", ""),
                                 location = taskObj.optString("location", ""),
+                                startKm = taskObj.optString("startKm", ""),
+                                endKm = taskObj.optString("endKm", ""),
                                 quantity = taskObj.optString("quantity", ""),
                                 unit = taskObj.optString("unit", ""),
                                 accumulativeQuantity = taskObj.optString("accumulativeQuantity", ""),
@@ -857,10 +919,26 @@ class ReportViewModel(
                         }
                     }
 
+                    // Parse photos
+                    val photosList = mutableListOf<String>()
+                    val photosArray = obj.optJSONArray("photos")
+                    if (photosArray != null) {
+                        for (j in 0 until photosArray.length()) {
+                            photosList.add(photosArray.getString(j))
+                        }
+                    }
+
+                    val rDate = obj.optString("date", "")
+                    val rSection = obj.optString("section", "")
+                    val rProject = obj.optString("project", "")
+                    val existing = repository.getExistingReport(rDate, rSection, rProject)
+
                     val report = DailyReport(
-                        project = obj.optString("project", ""),
-                        section = obj.optString("section", ""),
-                        date = obj.optString("date", ""),
+                        id = existing?.id ?: 0,
+                        reportNumber = obj.optInt("reportNumber", existing?.reportNumber ?: (100 + i)),
+                        project = rProject,
+                        section = rSection,
+                        date = rDate,
                         weather = obj.optString("weather", ""),
                         preparedBy = obj.optString("preparedBy", ""),
                         startKm = obj.optString("startKm", ""),
@@ -871,6 +949,7 @@ class ReportViewModel(
                         manpower = manList,
                         materials = matList,
                         legalPermits = legalList,
+                        photos = photosList.ifEmpty { existing?.photos ?: emptyList() },
                         obstacles = obj.optString("obstacles", ""),
                         tomorrowPlan = obj.optString("tomorrowPlan", ""),
                         reportType = obj.optString("reportType", "EXECUTION")

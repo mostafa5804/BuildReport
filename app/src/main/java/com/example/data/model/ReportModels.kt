@@ -23,7 +23,7 @@ data class MachineryEntry(
     val inactiveCount: Int = 0,
     val workingHours: String = "",
     val comments: String = "",
-    val ownershipType: String = "COMPANY" // "COMPANY" (شرکتی) or "RENTAL" (استیجاری)
+    val ownershipType: String = "COMPANY" // "COMPANY" (شرکتی), "RENTAL" (استیجاری), or "CONTRACTOR" (پیمانکار)
 )
 
 @JsonClass(generateAdapter = true)
@@ -67,6 +67,7 @@ data class DailyPhoto(
 @Entity(tableName = "daily_reports")
 data class DailyReport(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val reportNumber: Int = 100,
     val project: String = "",
     val section: String = "",
     val date: String = "",

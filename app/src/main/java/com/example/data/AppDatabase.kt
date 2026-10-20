@@ -5,9 +5,11 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.data.model.DailyReport
 
-@Database(entities = [DailyReport::class], version = 4, exportSchema = false)
+@Database(entities = [DailyReport::class], version = 5, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun dailyReportDao(): DailyReportDao
@@ -16,6 +18,12 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE daily_reports ADD COLUMN reportNumber INTEGER NOT NULL DEFAULT 100")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -23,7 +31,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "civilsync_database"
                 )
-                .fallbackToDestructiveMigration(true)
+                .addMigrations(MIGRATION_4_5)
                 .build()
                 INSTANCE = instance
                 instance

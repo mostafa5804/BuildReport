@@ -821,11 +821,12 @@ fun ProjectSettingsTab(
     var defaultWeather by remember(backupRestored) { mutableStateOf(viewModel.sharedPreferences.getString("default_weather", "") ?: "") }
     var defaultReportType by remember(backupRestored) { mutableStateOf(viewModel.sharedPreferences.getString("default_report_type", "") ?: "") }
     var defaultAppTheme by remember(backupRestored) { mutableStateOf(viewModel.sharedPreferences.getString("app_theme", "LIGHT") ?: "LIGHT") }
+    var baseReportNumber by remember(backupRestored) { mutableStateOf(viewModel.sharedPreferences.getInt("base_report_number", 100).toString()) }
 
     var userSignatureBase64 by remember(backupRestored) { mutableStateOf(viewModel.sharedPreferences.getString("user_signature", "") ?: "") }
     var showSignaturePadDialog by remember { mutableStateOf(false) }
 
-    var isBasicInfoExpanded by remember { mutableStateOf(false) }
+    var isBasicInfoExpanded by remember { mutableStateOf(true) }
     var isWeatherExpanded by remember { mutableStateOf(false) }
     var isThemeExpanded by remember { mutableStateOf(false) }
     var isReportExpanded by remember { mutableStateOf(false) }
@@ -953,14 +954,14 @@ fun ProjectSettingsTab(
                         modifier = Modifier.padding(start = 12.dp)
                     ) {
                         Text(
-                            text = "تنظیمات سامانه",
+                            text = "تنظیمات ثابت کارگاه (نسخه ۳.۱.۰)",
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp,
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "برای ثبت گزارش جدید، اطلاعات زیر را وارد کنید.",
+                            text = "این مشخصات یک‌بار تنظیم می‌شوند و در تمامی گزارش‌های روزانه به‌صورت خودکار درج می‌گردند.",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -973,7 +974,7 @@ fun ProjectSettingsTab(
                 ) {
                     // Section 1: مشخصات پایه کارگاه
                     ExpandableSettingsGroup(
-                        title = "مشخصات پایه کارگاه",
+                        title = "مشخصات پایه و ثابت کارگاه",
                         icon = Icons.Default.Domain,
                         isExpanded = isBasicInfoExpanded,
                         onToggle = { isBasicInfoExpanded = !isBasicInfoExpanded }
@@ -983,7 +984,7 @@ fun ProjectSettingsTab(
                             SettingsTextFieldWithIcon(
                                 value = defaultProject,
                                 onValueChange = { defaultProject = it },
-                                label = "نام پروژه",
+                                label = "نام پروژه (ثابت)",
                                 icon = Icons.Default.Article,
                                 isRequired = true
                             )
@@ -992,7 +993,7 @@ fun ProjectSettingsTab(
                             SettingsTextFieldWithIcon(
                                 value = defaultSection,
                                 onValueChange = { defaultSection = it },
-                                label = "بخش/واحد کاری",
+                                label = "واحد سازمانی گزارش‌دهنده (ثابت)",
                                 icon = Icons.Default.Description,
                                 isRequired = true
                             )
@@ -1001,8 +1002,17 @@ fun ProjectSettingsTab(
                             SettingsTextFieldWithIcon(
                                 value = defaultPreparedBy,
                                 onValueChange = { defaultPreparedBy = it },
-                                label = "تنظیم کننده گزارش",
+                                label = "نام سرپرست / تنظیم‌کننده گزارش (ثابت)",
                                 icon = Icons.Default.Person,
+                                isRequired = true
+                            )
+
+                            // Base Report Number (starting from 100)
+                            SettingsTextFieldWithIcon(
+                                value = baseReportNumber,
+                                onValueChange = { baseReportNumber = it },
+                                label = "شماره گزارش پایه (شروع شمارش خودکار، پیش‌فرض ۱۰۰)",
+                                icon = Icons.Default.Numbers,
                                 isRequired = true
                             )
 
@@ -1010,7 +1020,7 @@ fun ProjectSettingsTab(
                             SettingsTextFieldWithIcon(
                                 value = customUnitTitle,
                                 onValueChange = { customUnitTitle = it },
-                                label = "سایر واحدها (گزارش نوع پنجم)",
+                                label = "عنوان واحد سفارشی (سایر واحدها)",
                                 icon = Icons.Default.People
                             )
                         }
@@ -1372,10 +1382,12 @@ fun ProjectSettingsTab(
                 // Bottom Full-width save button
                 Button(
                     onClick = {
+                        val parsedBaseNum = normalizeDigits(baseReportNumber).toIntOrNull() ?: 100
                         viewModel.sharedPreferences.edit()
                             .putString("default_project", defaultProject)
                             .putString("default_section", defaultSection)
                             .putString("default_prepared_by", defaultPreparedBy)
+                            .putInt("base_report_number", parsedBaseNum)
                             .putString("custom_unit_title", customUnitTitle)
                             .putString("default_weather", defaultWeather)
                             .putString("default_report_type", defaultReportType)
@@ -1388,7 +1400,7 @@ fun ProjectSettingsTab(
                             .putBoolean("weather_auto_update", weatherAutoUpdate)
                             .apply()
 
-                        Toast.makeText(context, "تنظیمات با موفقیت ذخیره و نهایی شد ✅", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "تنظیمات ثابت کارگاه با موفقیت ذخیره شد ✅", Toast.LENGTH_SHORT).show()
                         focusManager.clearFocus()
                     },
                     modifier = Modifier
@@ -1706,7 +1718,7 @@ fun AboutAppTab(viewModel: ReportViewModel) {
                     shape = CircleShape
                 ) {
                     Text(
-                        text = "نسخه ۳.۰.۸",
+                        text = "نسخه ۳.۱.۰",
                         color = Color.White,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
@@ -1767,7 +1779,7 @@ fun AboutAppTab(viewModel: ReportViewModel) {
                     )
                     
                     Text(
-                        text = "✨ قابلیت‌های جدید (نسخه ۳.۰.۸):\n- رفع اشکال عدم نمایش لیست استعلامات در خروجی PDF.\n- قابلیت افزودن، ویرایش و حذف استعلامات در بخش حقوقی.\n- پشتیبان‌گیری استاندارد فایل JSON به جای متن قابل کپی.\n- اصلاح آیکون اصلی در نوار داشبورد.\n- دریافت و نمایش خودکار وضعیت آب‌وهوا با امکان به‌روزرسانی.\n- امکان پیوست تا ۴ تصویر با کیفیت بالا برای هر گزارش.",
+                        text = "✨ قابلیت‌های جدید (نسخه ۳.۱.۰):\n- پروفایل ثابت کارگاه، واحد سازمانی، سرپرست و امضای دیجیتال در تنظیمات.\n- شماره‌گذاری خودکار گزارش‌ها از ۱۰۰ به بالا با قابلیت تنظیم پایه.\n- کپی هوشمند یک‌کلیکی فعالیت‌ها، نفرات و ماشین‌آلات از گزارش دیروز.\n- ثبت وضعیت حضور یا مرخصی نفرات با قابلیت تغییر سریع.\n- تعیین مالکیت ماشین‌آلات (شرکتی / استیجاری / پیمانکار) و توضیحات دستی.\n- جابجایی ردیف‌ها (بالا/پایین)، ویرایش و حذف در تمامی جداول.\n- ذخیره‌سازی ۱ ماهه تصاویر در حافظه دائمی همراه با واترمارک کارگاهی خودکار.",
                         fontSize = 13.5.sp,
                         color = MaterialTheme.colorScheme.onSurface,
                         lineHeight = 24.sp,
@@ -1783,7 +1795,7 @@ fun AboutAppTab(viewModel: ReportViewModel) {
                                 val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                     type = "message/rfc822"
                                     putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf("MOSTAFA5804@GMAIL.COM"))
-                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "ارتباط با سازنده سامانه گزارش یار")
+                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "ارتباط با سازنده سامانه گزارش یار - نسخه ۳.۱.۰")
                                     putExtra(android.content.Intent.EXTRA_TEXT, "با سلام و احترام،\n\n")
                                 }
                                 context.startActivity(android.content.Intent.createChooser(intent, "ارتباط با سازنده"))
@@ -1824,7 +1836,7 @@ fun AboutAppTab(viewModel: ReportViewModel) {
                                 val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                     type = "message/rfc822"
                                     putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf("MOSTAFA5804@GMAIL.COM"))
-                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "پشتیبان داده‌های کارگاه - نسخه ۳.۰.۸")
+                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "پشتیبان داده‌های کارگاه - نسخه ۳.۱.۰")
                                     putExtra(android.content.Intent.EXTRA_TEXT, "با سلام،\nپشتیبان اطلاعات پروژه‌های من در فایل پیوست قرار دارد.")
                                     putExtra(android.content.Intent.EXTRA_STREAM, fileUri)
                                     addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -1867,7 +1879,8 @@ enum class ReportViewMode { LIST, COMPACT, MONTHLY }
 @Composable
 fun ReportListScreen(
     viewModel: ReportViewModel,
-    onEditReport: (DailyReport) -> Unit
+    onEditReport: (DailyReport) -> Unit,
+    onOpenSettings: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val reports by viewModel.filteredReports.collectAsStateWithLifecycle()
@@ -1875,10 +1888,15 @@ fun ReportListScreen(
     val isExporting by viewModel.isExporting.collectAsStateWithLifecycle()
     
     var viewMode by remember { mutableStateOf(ReportViewMode.LIST) }
+    var showFilterBar by remember { mutableStateOf(false) }
+    var selectedCategoryFilter by remember { mutableStateOf("ALL") }
     val customUnitTitle = remember { viewModel.sharedPreferences.getString("custom_unit_title", "سایر واحدها") ?: "سایر واحدها" }
     var showCreateDialog by remember { mutableStateOf(false) }
 
-    val displayedReports = reports
+    val displayedReports = remember(reports, selectedCategoryFilter) {
+        if (selectedCategoryFilter == "ALL") reports
+        else reports.filter { it.reportType == selectedCategoryFilter }
+    }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Scaffold(
@@ -1898,9 +1916,7 @@ fun ReportListScreen(
                             .padding(horizontal = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = {
-                            Toast.makeText(context, "بخش تنظیمات کارگاه ⚙️", Toast.LENGTH_SHORT).show()
-                        }) {
+                        IconButton(onClick = onOpenSettings) {
                             Icon(Icons.Default.Settings, contentDescription = "تنظیمات کارگاه", tint = MaterialTheme.colorScheme.onPrimary)
                         }
                         
@@ -1958,7 +1974,7 @@ fun ReportListScreen(
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "همه گزارشهای ثبت شده",
+                        text = "همه گزارشهای ثبت شده (${toPersianDigits(displayedReports.size.toString())} مورد)",
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -2026,11 +2042,14 @@ fun ReportListScreen(
                     
                     IconButton(
                         onClick = {
-                            Toast.makeText(context, "فیلتر و مرتب‌سازی فعال است 🔍", Toast.LENGTH_SHORT).show()
+                            showFilterBar = !showFilterBar
                         },
                         modifier = Modifier
                             .size(48.dp)
-                            .background(MaterialTheme.colorScheme.surface, CircleShape)
+                            .background(
+                                if (showFilterBar || selectedCategoryFilter != "ALL") MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                                CircleShape
+                            )
                             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
                     ) {
                         Icon(
@@ -2038,6 +2057,34 @@ fun ReportListScreen(
                             contentDescription = "فیلتر",
                             tint = MaterialTheme.colorScheme.primary
                         )
+                    }
+                }
+
+                if (showFilterBar) {
+                    val filterOptions = listOf(
+                        "ALL" to "همه واحدها",
+                        "EXECUTION" to "اجرایی 🔨",
+                        "TECHNICAL" to "دفتر فنی 📐",
+                        "WAREHOUSE" to "انبار 📦",
+                        "HSE" to "ایمنی 🛡️",
+                        "SURVEY" to "نقشه‌برداری 🗺️",
+                        "LEGAL" to "حقوقی ⚖️",
+                        "CUSTOM" to customUnitTitle
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        filterOptions.forEach { (key, label) ->
+                            FilterChip(
+                                selected = selectedCategoryFilter == key,
+                                onClick = { selectedCategoryFilter = key },
+                                label = { Text(label, fontSize = 11.5.sp, fontWeight = FontWeight.Bold) }
+                            )
+                        }
                     }
                 }
 
@@ -2230,7 +2277,7 @@ fun ReportEditorScreen(
         "LEGAL" -> listOf(
             "مشخصات پایه" to Icons.Default.Info,
             "تحصیل اراضی" to Icons.Default.Gavel,
-            "مجوز های قانونی" to Icons.Default.Assignment,
+            "مجوزهای قانونی" to Icons.Default.Assignment,
             "ماشین‌آلات" to Icons.Default.DirectionsCar,
             "پرسنل حقوقی" to Icons.Default.People,
             "گالری تصاویر" to Icons.Default.PhotoCamera,
@@ -2287,7 +2334,7 @@ fun ReportEditorScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -2297,9 +2344,9 @@ fun ReportEditorScreen(
                                 }
                                 Column {
                                     Text(
-                                        text = "ویرایش گزارش $currentUnitTitle 📝",
+                                        text = "گزارش $currentUnitTitle • #${toPersianDigits(currentReport.reportNumber.toString())} 📝",
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 15.sp,
+                                        fontSize = 14.5.sp,
                                         color = MaterialTheme.colorScheme.onPrimary
                                     )
                                 }
@@ -2343,29 +2390,57 @@ fun ReportEditorScreen(
                             }
                         }
 
-                        ScrollableTabRow(
-                            selectedTabIndex = selectedTab,
-                            edgePadding = 8.dp,
-                            containerColor = Color.Transparent,
-                            indicator = { tabPositions ->
-                                if (selectedTab < tabPositions.size) {
-                                    TabRowDefaults.Indicator(
-                                        Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                                        color = Color.White,
-                                        height = 3.dp
-                                    )
-                                }
-                            }
+                        // 2-Row Visible Tab Grid so all tabs (including Manpower, Photos, Notes) are visible without scrolling
+                        val splitIndex = (tabs.size + 1) / 2
+                        val tabRows = listOf(
+                            tabs.take(splitIndex).mapIndexed { idx, pair -> idx to pair },
+                            tabs.drop(splitIndex).mapIndexed { idx, pair -> (idx + splitIndex) to pair }
+                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            tabs.forEachIndexed { index, (title, icon) ->
-                                Tab(
-                                    selected = selectedTab == index,
-                                    onClick = { selectedTab = index },
-                                    icon = { Icon(icon, contentDescription = title, modifier = Modifier.size(20.dp)) },
-                                    text = { Text(title, fontSize = 11.5.sp, fontWeight = FontWeight.Bold) },
-                                    selectedContentColor = Color.White,
-                                    unselectedContentColor = Color.White.copy(alpha = 0.6f)
-                                )
+                            tabRows.forEach { rowItems ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    rowItems.forEach { (index, item) ->
+                                        val (title, icon) = item
+                                        val isSelected = selectedTab == index
+                                        Surface(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clickable { selectedTab = index },
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.14f)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 7.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = icon,
+                                                    contentDescription = title,
+                                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else Color.White,
+                                                    modifier = Modifier.size(15.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text(
+                                                    text = title,
+                                                    fontSize = 10.5.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.White,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -3270,6 +3345,9 @@ fun MainAppScreen(
                             viewModel = viewModel,
                             onEditReport = { report ->
                                 viewModel.selectReport(report.id)
+                            },
+                            onOpenSettings = {
+                                selectedTab = 2
                             }
                         )
                         2 -> ProjectSettingsTab(
@@ -3325,22 +3403,24 @@ private fun formatGregorianToJalali(dateString: String): String {
         }
         
         var jm = 0
-        while (jm < 12 && jDayNo >= jDaysInMonth[jm]) {
-            if (jm == 11) {
-                val isLeap = (jy == 1403 || jy == 1407 || jy == 1411 || jy == 1399 || (jy - 1399) % 4 == 0)
-                val esfandDays = if (isLeap) 30 else 29
-                if (jDayNo >= esfandDays) {
-                    jDayNo -= esfandDays
-                    jm++
-                }
+        val leapRemainders = intArrayOf(1, 5, 9, 13, 17, 22, 26, 30)
+        while (jm < 12) {
+            val daysInMonth = if (jm == 11) {
+                val isLeap = (jy % 33) in leapRemainders
+                if (isLeap) 30 else 29
             } else {
-                jDayNo -= jDaysInMonth[jm]
+                jDaysInMonth[jm]
+            }
+            if (jDayNo >= daysInMonth) {
+                jDayNo -= daysInMonth
                 jm++
+            } else {
+                break
             }
         }
         
         val jd = jDayNo + 1
-        return String.format("%04d/%02d/%02d", jy, jm + 1, jd)
+        return toPersianDigits(String.format(java.util.Locale.US, "%04d/%02d/%02d", jy, jm + 1, jd))
     } catch (e: Exception) {
         return dateString
     }
@@ -3401,14 +3481,32 @@ fun ReportCardItem(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(
-                    text = report.project.ifEmpty { "خط نهم سراسری عجب شیر-تبریز" },
-                    fontWeight = FontWeight.Bold,
-                    fontSize = if (viewMode == ReportViewMode.COMPACT) 13.sp else 15.sp,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Surface(
+                        color = Color(0xFFFFFBEB),
+                        shape = RoundedCornerShape(6.dp),
+                        border = BorderStroke(1.dp, Color(0xFFFDE68A))
+                    ) {
+                        Text(
+                            text = "#${toPersianDigits(report.reportNumber.toString())}",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFFD97706),
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                    Text(
+                        text = report.project.ifEmpty { "خط نهم سراسری عجب شیر-تبریز" },
+                        fontWeight = FontWeight.Bold,
+                        fontSize = if (viewMode == ReportViewMode.COMPACT) 13.sp else 15.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
                 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
