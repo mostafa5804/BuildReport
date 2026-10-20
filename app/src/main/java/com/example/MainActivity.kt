@@ -28,7 +28,11 @@ class MainActivity : ComponentActivity() {
         // Schedule / initialize daily reminder alarm at 20:00 if enabled (defaults to true)
         val dailyReminderEnabled = sharedPrefs.getBoolean("daily_reminder_enabled", true)
         if (dailyReminderEnabled) {
-            com.example.receiver.DailyReminderReceiver.scheduleDailyReminder(this)
+            try {
+                com.example.receiver.DailyReminderReceiver.scheduleDailyReminder(this)
+            } catch (e: Throwable) {
+                android.util.Log.e("MainActivity", "Failed to schedule daily reminder", e)
+            }
         }
         
         // Initialize state viewmodels via custom factory

@@ -67,7 +67,7 @@ data class DailyPhoto(
 @Entity(tableName = "daily_reports")
 data class DailyReport(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val reportNumber: Int = 100,
+    @androidx.room.ColumnInfo(defaultValue = "100") val reportNumber: Int = 100,
     val project: String = "",
     val section: String = "",
     val date: String = "",

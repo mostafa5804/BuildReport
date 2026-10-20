@@ -325,8 +325,7 @@ class ReportViewModel(
         }
 
         val todayPersian = getTodayPersianDate()
-        val baseNumStr = sharedPreferences.getString("base_report_number", "100") ?: "100"
-        val baseNum = baseNumStr.filter { it.isDigit() }.toIntOrNull() ?: 100
+        val baseNum = getBaseReportNumber()
 
         viewModelScope.launch {
             val maxExisting = repository.getMaxReportNumber() ?: (baseNum - 1)
@@ -344,6 +343,16 @@ class ReportViewModel(
                 reportType = resolvedType
             )
             saveCurrentReportImmediately()
+        }
+    }
+
+    fun getBaseReportNumber(): Int {
+        return try {
+            sharedPreferences.getInt("base_report_number", 100)
+        } catch (e: ClassCastException) {
+            sharedPreferences.getString("base_report_number", "100")
+                ?.filter { it.isDigit() }
+                ?.toIntOrNull() ?: 100
         }
     }
 
@@ -382,8 +391,7 @@ class ReportViewModel(
     // Duplicate an existing report with today's date so user doesn't re-enter data
     fun duplicateReport(report: DailyReport) {
         viewModelScope.launch {
-            val baseNumStr = sharedPreferences.getString("base_report_number", "100") ?: "100"
-            val baseNum = baseNumStr.filter { it.isDigit() }.toIntOrNull() ?: 100
+            val baseNum = getBaseReportNumber()
             val maxExisting = repository.getMaxReportNumber() ?: (baseNum - 1)
             val nextReportNumber = maxOf(baseNum, maxExisting + 1)
 
@@ -744,12 +752,13 @@ class ReportViewModel(
             val stringKeys = listOf(
                 "default_project", "default_section", "default_prepared_by", "default_weather",
                 "custom_unit_title", "default_start_km", "default_end_km", "default_report_type",
-                "base_report_number", "user_signature", "app_theme", "dashboard_recent_activities",
+                "user_signature", "app_theme", "dashboard_recent_activities",
                 "dashboard_tomorrow_forecast", "weather_city_name"
             )
             for (key in stringKeys) {
                 put(key, sharedPreferences.getString(key, ""))
             }
+            put("base_report_number", getBaseReportNumber())
             put("daily_reminder_enabled", sharedPreferences.getBoolean("daily_reminder_enabled", true))
 
             val stringSetKeys = listOf(
@@ -794,14 +803,19 @@ class ReportViewModel(
                     val stringKeys = listOf(
                         "default_project", "default_section", "default_prepared_by", "default_weather",
                         "custom_unit_title", "default_start_km", "default_end_km", "default_report_type",
-                        "base_report_number", "user_signature", "app_theme", "dashboard_recent_activities",
+                        "user_signature", "app_theme", "dashboard_recent_activities",
                         "dashboard_tomorrow_forecast", "weather_city_name"
                     )
                     for (key in stringKeys) {
                         if (settingsObj.has(key)) {
-                            val v = settingsObj.getString(key)
+                            val v = settingsObj.optString(key, "")
                             if (v.isNotEmpty()) editor.putString(key, v)
                         }
+                    }
+                    if (settingsObj.has("base_report_number")) {
+                        val raw = settingsObj.optString("base_report_number", "100")
+                        val parsed = raw.filter { it.isDigit() }.toIntOrNull() ?: settingsObj.optInt("base_report_number", 100)
+                        editor.putInt("base_report_number", parsed)
                     }
                     if (settingsObj.has("daily_reminder_enabled")) {
                         editor.putBoolean("daily_reminder_enabled", settingsObj.getBoolean("daily_reminder_enabled"))

@@ -18,9 +18,13 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        private val MIGRATION_4_5 = object : Migration(4, 5) {
+        val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE daily_reports ADD COLUMN reportNumber INTEGER NOT NULL DEFAULT 100")
+                try {
+                    db.execSQL("ALTER TABLE daily_reports ADD COLUMN reportNumber INTEGER NOT NULL DEFAULT 100")
+                } catch (_: Exception) {
+                    // Column may already exist
+                }
             }
         }
 
@@ -32,6 +36,8 @@ abstract class AppDatabase : RoomDatabase() {
                     "civilsync_database"
                 )
                 .addMigrations(MIGRATION_4_5)
+                .fallbackToDestructiveMigration(true)
+                .fallbackToDestructiveMigrationOnDowngrade(true)
                 .build()
                 INSTANCE = instance
                 instance

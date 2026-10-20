@@ -18,9 +18,14 @@ class Converters {
     }
 
     @TypeConverter
-    fun toTaskList(json: String): List<TaskEntry>? {
-        val type = Types.newParameterizedType(List::class.java, TaskEntry::class.java)
-        return moshi.adapter<List<TaskEntry>>(type).fromJson(json)
+    fun toTaskList(json: String?): List<TaskEntry> {
+        if (json.isNullOrBlank()) return emptyList()
+        return try {
+            val type = Types.newParameterizedType(List::class.java, TaskEntry::class.java)
+            moshi.adapter<List<TaskEntry>>(type).fromJson(json) ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 
     @TypeConverter
@@ -30,9 +35,14 @@ class Converters {
     }
 
     @TypeConverter
-    fun toMachineryList(json: String): List<MachineryEntry>? {
-        val type = Types.newParameterizedType(List::class.java, MachineryEntry::class.java)
-        return moshi.adapter<List<MachineryEntry>>(type).fromJson(json)
+    fun toMachineryList(json: String?): List<MachineryEntry> {
+        if (json.isNullOrBlank()) return emptyList()
+        return try {
+            val type = Types.newParameterizedType(List::class.java, MachineryEntry::class.java)
+            moshi.adapter<List<MachineryEntry>>(type).fromJson(json) ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 
     @TypeConverter
@@ -42,9 +52,14 @@ class Converters {
     }
 
     @TypeConverter
-    fun toManpowerList(json: String): List<ManpowerEntry>? {
-        val type = Types.newParameterizedType(List::class.java, ManpowerEntry::class.java)
-        return moshi.adapter<List<ManpowerEntry>>(type).fromJson(json)
+    fun toManpowerList(json: String?): List<ManpowerEntry> {
+        if (json.isNullOrBlank()) return emptyList()
+        return try {
+            val type = Types.newParameterizedType(List::class.java, ManpowerEntry::class.java)
+            moshi.adapter<List<ManpowerEntry>>(type).fromJson(json) ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 
     @TypeConverter
@@ -54,9 +69,14 @@ class Converters {
     }
 
     @TypeConverter
-    fun toMaterialList(json: String): List<MaterialEntry>? {
-        val type = Types.newParameterizedType(List::class.java, MaterialEntry::class.java)
-        return moshi.adapter<List<MaterialEntry>>(type).fromJson(json)
+    fun toMaterialList(json: String?): List<MaterialEntry> {
+        if (json.isNullOrBlank()) return emptyList()
+        return try {
+            val type = Types.newParameterizedType(List::class.java, MaterialEntry::class.java)
+            moshi.adapter<List<MaterialEntry>>(type).fromJson(json) ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 
     @TypeConverter
@@ -66,9 +86,14 @@ class Converters {
     }
 
     @TypeConverter
-    fun toLegalPermitList(json: String): List<LegalPermitEntry>? {
-        val type = Types.newParameterizedType(List::class.java, LegalPermitEntry::class.java)
-        return moshi.adapter<List<LegalPermitEntry>>(type).fromJson(json)
+    fun toLegalPermitList(json: String?): List<LegalPermitEntry> {
+        if (json.isNullOrBlank()) return emptyList()
+        return try {
+            val type = Types.newParameterizedType(List::class.java, LegalPermitEntry::class.java)
+            moshi.adapter<List<LegalPermitEntry>>(type).fromJson(json) ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 
     @TypeConverter
@@ -78,8 +103,13 @@ class Converters {
     }
 
     @TypeConverter
-    fun toStringList(json: String): List<String>? {
-        val type = Types.newParameterizedType(List::class.java, String::class.java)
-        return moshi.adapter<List<String>>(type).fromJson(json)
+    fun toStringList(json: String?): List<String> {
+        if (json.isNullOrBlank()) return emptyList()
+        return try {
+            val type = Types.newParameterizedType(List::class.java, String::class.java)
+            moshi.adapter<List<String>>(type).fromJson(json) ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 }
