@@ -405,6 +405,60 @@ class ReportViewModel(
         }
     }
 
+    // Smart copy manpower from the most recent previous report (prioritizing same unit)
+    fun copyManpowerFromPreviousReport(onResult: (Int, String) -> Unit) {
+        val current = _currentReport.value ?: return
+        val candidates = allReports.value.filter { it.id != current.id && it.manpower.isNotEmpty() }
+        val sourceReport = candidates.firstOrNull { it.reportType == current.reportType }
+            ?: candidates.firstOrNull()
+
+        if (sourceReport == null) {
+            onResult(0, "")
+            return
+        }
+
+        val existingKeys = current.manpower.map { "${it.name.trim()}|${it.role.trim()}" }.toSet()
+        val newEntries = sourceReport.manpower.filter {
+            "${it.name.trim()}|${it.role.trim()}" !in existingKeys
+        }
+
+        if (newEntries.isEmpty()) {
+            onResult(-1, sourceReport.date)
+            return
+        }
+
+        updateCurrentReport { r ->
+            r.copy(manpower = r.manpower + newEntries)
+        }
+        onResult(newEntries.size, sourceReport.date)
+    }
+
+    // Smart copy machinery from the most recent previous report (prioritizing same unit)
+    fun copyMachineryFromPreviousReport(onResult: (Int, String) -> Unit) {
+        val current = _currentReport.value ?: return
+        val candidates = allReports.value.filter { it.id != current.id && it.machinery.isNotEmpty() }
+        val sourceReport = candidates.firstOrNull { it.reportType == current.reportType }
+            ?: candidates.firstOrNull()
+
+        if (sourceReport == null) {
+            onResult(0, "")
+            return
+        }
+
+        val existingTypes = current.machinery.map { it.type.trim() }.toSet()
+        val newEntries = sourceReport.machinery.filter { it.type.trim() !in existingTypes }
+
+        if (newEntries.isEmpty()) {
+            onResult(-1, sourceReport.date)
+            return
+        }
+
+        updateCurrentReport { r ->
+            r.copy(machinery = r.machinery + newEntries)
+        }
+        onResult(newEntries.size, sourceReport.date)
+    }
+
     fun selectReport(reportId: Int) {
         clearTemporaryPhotos()
         viewModelScope.launch {

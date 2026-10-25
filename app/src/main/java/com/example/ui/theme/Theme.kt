@@ -13,40 +13,48 @@ import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme =
   darkColorScheme(
-    primary = DeepTealDark,
-    secondary = EmeraldDark,
-    tertiary = AmberAccentDark,
-    background = BackgroundDark,
-    surface = SurfaceDark,
-    onPrimary = Color(0xFF0F172A),
-    onSecondary = Color(0xFF0F172A),
-    onTertiary = Color(0xFF0F172A),
-    onBackground = Color(0xFFF1F5F9),
-    onSurface = Color(0xFFF1F5F9),
-    surfaceVariant = Color(0xFF1E293B),
-    onSurfaceVariant = Color(0xFF94A3B8)
+    primary = DarkAccentTeal,
+    secondary = DarkAccentCyan,
+    tertiary = DarkAccentAmber,
+    background = DarkBgDeep,
+    surface = DarkBgSurface,
+    onPrimary = Color(0xFF000000),
+    onSecondary = Color(0xFF000000),
+    onTertiary = Color(0xFF000000),
+    onBackground = DarkTextMain,
+    onSurface = DarkTextMain,
+    surfaceVariant = DarkBgGlass,
+    onSurfaceVariant = DarkTextMuted,
+    primaryContainer = Color(0x3310B981),
+    onPrimaryContainer = DarkAccentTeal,
+    outline = DarkBorderSubtle,
+    outlineVariant = DarkBorderStrong
   )
 
 private val LightColorScheme =
   lightColorScheme(
-    primary = DeepTeal,
-    secondary = Emerald,
-    tertiary = AmberAccent,
-    background = DesignBackground,
-    surface = DesignSurface,
+    primary = LightAccentTeal,
+    secondary = LightAccentCyan,
+    tertiary = LightAccentAmber,
+    background = LightBgDeep,
+    surface = LightBgSurface,
     onPrimary = Color.White,
     onSecondary = Color.White,
     onTertiary = Color.White,
-    onBackground = DesignTextPrimary,
-    onSurface = DesignTextPrimary,
+    onBackground = LightTextMain,
+    onSurface = LightTextMain,
     surfaceVariant = Color(0xFFF1F5F9),
-    onSurfaceVariant = DesignTextSecondary
+    onSurfaceVariant = LightTextMuted,
+    primaryContainer = LightAccentTealBg,
+    onPrimaryContainer = LightAccentTeal,
+    outline = LightBorderSubtle,
+    outlineVariant = LightBorderStrong
   )
 
 @Composable
 fun MyApplicationTheme(
   darkTheme: Boolean = isSystemInDarkTheme(),
-  dynamicColor: Boolean = false, // Turned off to enforce clean professional corporate branding
+  dynamicColor: Boolean = false, // Turned off to enforce clean professional branding
   content: @Composable () -> Unit,
 ) {
   val colorScheme =
@@ -62,3 +70,4 @@ fun MyApplicationTheme(
 
   MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
 }
+

@@ -1,7 +1,5 @@
 package com.example.ui.screens
 
-import com.example.R
-
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.animation.*
@@ -26,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -221,142 +220,34 @@ fun ActivityItemCard(
     }
 }
 
-// --- REDES@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun BuildReportTopAppBar(
-    activeUnit: String,
-    latestReportNumber: Int,
-    isDarkMode: Boolean,
-    onToggleTheme: () -> Unit,
-    onOpenLogoInfo: () -> Unit,
-    onQuickPdf: () -> Unit
-) {
-    Surface(
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(horizontal = 14.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // Squircle logo box
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF0F172A))
-                        .clickable { onOpenLogoInfo() }
-                        .padding(2.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_app_logo),
-                        contentDescription = "BuildReport Logo",
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-
-                Column {
-                    Text(
-                        text = "گزارش روزانه کارگاه",
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 15.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "$activeUnit • شماره گزارش: ${toPersianDigits(latestReportNumber)}",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                IconButton(
-                    onClick = onOpenLogoInfo,
-                    modifier = Modifier
-                        .size(34.dp)
-                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
-                ) {
-                    Text("🎨", fontSize = 14.sp)
-                }
-                IconButton(
-                    onClick = onQuickPdf,
-                    modifier = Modifier
-                        .size(34.dp)
-                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
-                ) {
-                    Text("🖨️", fontSize = 14.sp)
-                }
-                IconButton(
-                    onClick = onToggleTheme,
-                    modifier = Modifier
-                        .size(34.dp)
-                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
-                ) {
-                    Text(if (isDarkMode) "☀️" else "🌙", fontSize = 14.sp)
-                }
-            }
-        }
-    }
-}
-
+// --- REDESIGNED SCREEN 1: DASHBOARD (2026 Dual-Theme Titanium & Slate) ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectDashboardTab(
     reportsCount: Int,
     reports: List<DailyReport>,
     viewModel: ReportViewModel,
+    isDarkMode: Boolean,
+    onToggleTheme: () -> Unit,
     onCreateReport: (String) -> Unit,
-    onViewReportsTab: () -> Unit,
-    onOpenSettingsTab: () -> Unit = {}
+    onViewReportsTab: () -> Unit
 ) {
     val context = LocalContext.current
     val backupRestored by viewModel.backupRestoredEvent.collectAsState()
     val defaultPreparedBy = remember(backupRestored) { viewModel.sharedPreferences.getString("default_prepared_by", "") ?: "" }
     val defaultProject = remember(backupRestored) { viewModel.sharedPreferences.getString("default_project", "") ?: "" }
-    val defaultReportType = remember(backupRestored) { viewModel.sharedPreferences.getString("default_report_type", "EXECUTION") ?: "EXECUTION" }
-    val customUnitTitle = remember(backupRestored) { viewModel.sharedPreferences.getString("custom_unit_title", "سایر واحدها") ?: "سایر واحدها" }
-
-    val activeUnitTitle = when (defaultReportType) {
-        "WAREHOUSE" -> "واحد انبار"
-        "TECHNICAL" -> "واحد دفتر فنی"
-        "HSE" -> "واحد ایمنی HSE"
-        "SURVEY" -> "واحد نقشه‌برداری"
-        "LEGAL" -> "واحد حقوقی"
-        "CUSTOM" -> customUnitTitle
-        else -> "واحد اجرایی"
-    }
-
-    val todayPersian = viewModel.getTodayPersianDate()
-    val baseReportNum = viewModel.getBaseReportNumber()
-    val latestReportNum = if (reports.isNotEmpty()) reports.maxOf { it.reportNumber } else baseReportNum
-
-    val todayReport = reports.firstOrNull { it.date == todayPersian }
-    val yesterdayReport = reports.firstOrNull { it.id != (todayReport?.id ?: 0) }
-
-    val totalManpowerDays = reports.sumOf { rep ->
-        rep.manpower.filter { !it.isOnLeave }.sumOf { it.count.coerceAtLeast(1) }
-    }
-    val todayPersonnel = todayReport?.manpower?.filter { !it.isOnLeave }?.sumOf { it.count.coerceAtLeast(1) } ?: 0
-
+    val defaultReportType = remember(backupRestored) { viewModel.sharedPreferences.getString("default_report_type", "ASK") ?: "ASK" }
+    
+    var showCreateReportDialog by remember { mutableStateOf(false) }
+    
     // Weather States
     val weatherEnabled = remember(backupRestored) { viewModel.sharedPreferences.getBoolean("weather_enabled", true) }
+    val cityName = remember(backupRestored) { viewModel.sharedPreferences.getString("weather_city_name", "") ?: "" }
+    
     val currentWeather by viewModel.currentWeather.collectAsStateWithLifecycle()
     val dailyForecast by viewModel.dailyForecast.collectAsStateWithLifecycle()
     val isWeatherLoading by viewModel.isWeatherLoading.collectAsStateWithLifecycle()
+    
     var showForecastDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -375,345 +266,121 @@ fun ProjectDashboardTab(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 96.dp)
         ) {
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // 1. HERO CARD (Blueprint Navy Gradient matching BuildReport_v3.1.0_Prototype.html)
-            Card(
+            // 1. Top Header / 2026 Titanium & Emerald Gradient Banner
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp),
-                shape = RoundedCornerShape(22.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            brush = androidx.compose.ui.graphics.Brush.linearGradient(
-                                colors = listOf(Color(0xFF1E3A8A), Color(0xFF1D4ED8), Color(0xFF0F172A))
+                    .background(
+                        brush = if (isDarkMode) {
+                            Brush.linearGradient(
+                                colors = listOf(Color(0xFF131B2A), Color(0xFF0F172A), Color(0xFF0B0F17))
                             )
-                        )
-                        .padding(16.dp)
-                ) {
-                    Column {
-                        // Hero Top: Date Badge + Weather Pill
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .background(Color.White.copy(alpha = 0.16f), RoundedCornerShape(99.dp))
-                                    .padding(horizontal = 10.dp, vertical = 5.dp)
-                            ) {
-                                val repNum = todayReport?.reportNumber ?: (latestReportNum + if (reports.isEmpty()) 0 else 1)
-                                Text(
-                                    text = "📅 $todayPersian • گزارش #${toPersianDigits(repNum)}",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                            }
-
-                            // Weather Pill
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(99.dp))
-                                    .background(Color(0xFF0F172A).copy(alpha = 0.5f))
-                                    .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(99.dp))
-                                    .clickable {
-                                        viewModel.fetchWeatherIfNeeded(forceRefresh = true)
-                                        if (dailyForecast != null) showForecastDialog = true
-                                    }
-                                    .padding(horizontal = 10.dp, vertical = 5.dp)
-                            ) {
-                                if (isWeatherLoading && currentWeather == null) {
-                                    CircularProgressIndicator(modifier = Modifier.size(13.dp), strokeWidth = 2.dp, color = Color.White)
-                                } else if (currentWeather != null) {
-                                    val code = dailyForecast?.weatherCode?.firstOrNull() ?: currentWeather!!.weatherCode
-                                    val (wIcon, wDesc) = com.example.weather.WeatherRepository.getWeatherCodeInfo(code, currentWeather!!.isDay == 1)
-                                    val temp = currentWeather!!.temperature.toInt()
-                                    Text(
-                                        text = "$wIcon $temp°C $wDesc 🔄",
-                                        fontSize = 10.5.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White
-                                    )
-                                } else {
-                                    Text(
-                                        text = "☀️ ۲۴°C صاف 🔄",
-                                        fontSize = 10.5.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Text(
-                            text = defaultProject.ifBlank { "پروژه احداث خط انتقال آب و ابنیه فنی — قطعه ۲" },
-                            fontSize = 14.5.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White
-                        )
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Text(
-                            text = "👷 $activeUnitTitle • سرپرست: ${defaultPreparedBy.ifBlank { "مهندس ناظر" }}",
-                            fontSize = 11.sp,
-                            color = Color(0xFFCBD5E1)
-                        )
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        // Hero Action Buttons
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Button(
-                                onClick = {
-                                    if (todayReport != null) {
-                                        viewModel.selectReport(todayReport.id)
-                                    } else {
-                                        val typeToUse = if (defaultReportType == "ASK" || defaultReportType.isEmpty()) "EXECUTION" else defaultReportType
-                                        onCreateReport(typeToUse)
-                                    }
-                                },
-                                modifier = Modifier.weight(1.3f),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFFF59E0B),
-                                    contentColor = Color(0xFF0F172A)
-                                ),
-                                shape = RoundedCornerShape(11.dp),
-                                contentPadding = PaddingValues(vertical = 10.dp)
-                            ) {
-                                Text("✍️ ثبت / ویرایش گزارش امروز", fontSize = 11.5.sp, fontWeight = FontWeight.ExtraBold)
-                            }
-
-                            OutlinedButton(
-                                onClick = {
-                                    if (todayReport != null) {
-                                        viewModel.selectReport(todayReport.id)
-                                        viewModel.copyFromYesterdayReport { _, msg ->
-                                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                        }
-                                    } else {
-                                        val typeToUse = if (defaultReportType == "ASK" || defaultReportType.isEmpty()) "EXECUTION" else defaultReportType
-                                        onCreateReport(typeToUse)
-                                        viewModel.copyFromYesterdayReport { _, msg ->
-                                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                },
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    containerColor = Color.White.copy(alpha = 0.16f),
-                                    contentColor = Color.White
-                                ),
-                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.35f)),
-                                shape = RoundedCornerShape(11.dp),
-                                contentPadding = PaddingValues(vertical = 10.dp)
-                            ) {
-                                Text("⚡ کپی هوشمند", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // 2. 2-DAY RECENT SYNC CARD (وضعیت ۲ روز اخیر کارگاه)
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        } else {
+                            Brush.linearGradient(
+                                colors = listOf(Color(0xFF065F46), Color(0xFF059669), Color(0xFF10B981))
+                            )
+                        },
+                        shape = RoundedCornerShape(bottomStart = 26.dp, bottomEnd = 26.dp)
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = if (isDarkMode) Color(0x3310B981) else Color.Transparent,
+                        shape = RoundedCornerShape(bottomStart = 26.dp, bottomEnd = 26.dp)
+                    )
+                    .shadow(10.dp, RoundedCornerShape(bottomStart = 26.dp, bottomEnd = 26.dp))
+                    .padding(top = 44.dp, bottom = 22.dp, start = 18.dp, end = 18.dp)
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
+                Column {
+                    // Top Island Status Bar
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(
-                            text = "🔄 وضعیت ۲ روز اخیر کارگاه",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "⚡ کپی از دیروز",
-                            fontSize = 10.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.clickable {
-                                if (todayReport != null) {
-                                    viewModel.selectReport(todayReport.id)
-                                    viewModel.copyFromYesterdayReport { _, msg ->
-                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                    }
-                                } else {
-                                    val typeToUse = if (defaultReportType == "ASK" || defaultReportType.isEmpty()) "EXECUTION" else defaultReportType
-                                    onCreateReport(typeToUse)
-                                    viewModel.copyFromYesterdayReport { _, msg ->
-                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            }
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Row 1: Today
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
+                        // Project Badge / Dynamic island capsule
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 10.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                                .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(99.dp))
+                                .border(1.dp, Color(0x3310B981), RoundedCornerShape(99.dp))
+                                .padding(horizontal = 12.dp, vertical = 4.dp)
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.weight(1f)
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(9.dp)
-                                        .clip(CircleShape)
-                                        .background(if (todayReport != null) Color(0xFF10B981) else Color(0xFFF59E0B))
+                                        .size(7.dp)
+                                        .background(Color(0xFF10B981), CircleShape)
                                 )
-                                Column {
-                                    val repNum = todayReport?.reportNumber ?: (latestReportNum + if (reports.isEmpty()) 0 else 1)
-                                    Text(
-                                        text = "امروز ($todayPersian) — گزارش #${toPersianDigits(repNum)}",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 11.5.sp,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = if (todayReport != null) {
-                                            "${toPersianDigits(todayReport.tasks.size)} فعالیت • ${toPersianDigits(todayReport.manpower.size)} نیرو • ${toPersianDigits(todayReport.machinery.size)} دستگاه • ${toPersianDigits(todayReport.photos.size)} عکس"
-                                        } else {
-                                            "هنوز ثبتی انجام نشده است"
-                                        },
-                                        fontSize = 10.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+                                Text(
+                                    text = if (defaultProject.isNotBlank()) defaultProject else "سامانه هوشمند کارگاه",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF10B981),
+                                    maxLines = 1
+                                )
                             }
+                        }
 
-                            Button(
-                                onClick = {
-                                    if (todayReport != null) {
-                                        viewModel.selectReport(todayReport.id)
-                                    } else {
-                                        val typeToUse = if (defaultReportType == "ASK" || defaultReportType.isEmpty()) "EXECUTION" else defaultReportType
-                                        onCreateReport(typeToUse)
-                                    }
-                                },
-                                shape = RoundedCornerShape(7.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        // Theme switch button (borderless)
+                        IconButton(
+                            onClick = onToggleTheme,
+                            modifier = Modifier.size(38.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isDarkMode) Icons.Default.WbSunny else Icons.Default.DarkMode,
+                                contentDescription = "تغییر تم (روشن / دارک)",
+                                tint = if (isDarkMode) Color(0xFFFBBF24) else Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Title & Description
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .shadow(8.dp, RoundedCornerShape(14.dp))
+                                .background(
+                                    if (isDarkMode) Color(0xFF162032) else Color.White,
+                                    RoundedCornerShape(14.dp)
+                                )
+                                .border(
+                                    1.dp,
+                                    if (isDarkMode) Color(0x4D10B981) else Color(0xFFE2E8F0),
+                                    RoundedCornerShape(14.dp)
                                 ),
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                                modifier = Modifier.height(28.dp)
-                            ) {
-                                Text(if (todayReport != null) "ادامه ثبت" else "شروع ثبت", fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    // Row 2: Yesterday / Previous
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 10.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            contentAlignment = Alignment.Center
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(9.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF10B981))
-                                )
-                                Column {
-                                    if (yesterdayReport != null) {
-                                        Text(
-                                            text = "دیروز (${yesterdayReport.date}) — گزارش #${toPersianDigits(yesterdayReport.reportNumber)}",
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 11.5.sp,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "${toPersianDigits(yesterdayReport.tasks.size)} فعالیت • ${toPersianDigits(yesterdayReport.manpower.size)} نیرو • ${toPersianDigits(yesterdayReport.machinery.size)} دستگاه • امضا پیوست شد",
-                                            fontSize = 10.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    } else {
-                                        Text(
-                                            text = "گزارش روز قبل",
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 11.5.sp,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "در حال حاضر گزارش قبلی موجود نیست",
-                                            fontSize = 10.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                            }
+                            Icon(
+                                imageVector = Icons.Default.Engineering,
+                                contentDescription = "Logo",
+                                tint = if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669),
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
 
-                            if (yesterdayReport != null) {
-                                Button(
-                                    onClick = {
-                                        viewModel.generateAndSharePdf(context, yesterdayReport) { success ->
-                                            if (!success) Toast.makeText(context, "خطا در خروجی PDF ❌", Toast.LENGTH_SHORT).show()
-                                        }
-                                    },
-                                    shape = RoundedCornerShape(7.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFFD1FAE5),
-                                        contentColor = Color(0xFF065F46)
-                                    ),
-                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                                    modifier = Modifier.height(28.dp)
-                                ) {
-                                    Text("PDF 📄", fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
+                        Column {
+                            Text(
+                                text = "سامانه گزارش یار",
+                                fontSize = 19.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White
+                            )
+                            Text(
+                                text = if (defaultPreparedBy.isNotBlank()) "خوش‌آمدید $defaultPreparedBy 👋" else "سامانه مدیریت و مستندسازی کارگاهی",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.White.copy(alpha = 0.85f)
+                            )
                         }
                     }
                 }
@@ -721,373 +388,849 @@ fun ProjectDashboardTab(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // 3. KPI SUMMARY GRID (خلاصه آمار ماه جاری)
-            Row(
+            // 2. Greeting / Project Status Card
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                Text(
-                    text = "📊 خلاصه آمار ماه جاری",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Text(
-                    text = "ویرایش مشخصات ثابت ⚙️",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.clickable { onOpenSettingsTab() }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // KPI 1: Report Counter
-                Card(
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column(modifier = Modifier.padding(11.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(MaterialTheme.colorScheme.primaryContainer),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("🔢", fontSize = 14.sp)
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .background(Color(0xFFD1FAE5), RoundedCornerShape(99.dp))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text("شروع از ${toPersianDigits(baseReportNum)}", fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF065F46))
-                            }
+                    Column(modifier = Modifier.weight(1f)) {
+                        if (defaultPreparedBy.isNotBlank()) {
+                            Text(
+                                text = "سلام $defaultPreparedBy 👋",
+                                fontSize = 16.5.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        } else {
+                            Text(
+                                text = "خوش آمدید 👋",
+                                fontSize = 16.5.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "گزارش #${toPersianDigits(latestReportNum)}",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Black,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "شمارنده اتوماتیک گزارش",
-                            fontSize = 10.5.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                // KPI 2: Manpower
-                Card(
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(modifier = Modifier.padding(11.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0xFFFEF3C7)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("👷", fontSize = 14.sp)
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .background(Color(0xFFFEF3C7), RoundedCornerShape(99.dp))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text("امروز: ${toPersianDigits(todayPersonnel)} نفر", fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF92400E))
-                            }
+                        Spacer(modifier = Modifier.height(3.dp))
+                        if (defaultProject.isNotBlank()) {
+                            Text(
+                                text = "پروژه: $defaultProject",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else {
+                            Text(
+                                text = "مشخصات پروژه در بخش تنظیمات قابل تعریف است.",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "${toPersianDigits(totalManpowerDays)} نفر-روز",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Black,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "کارکرد نیروی انسانی",
-                            fontSize = 10.5.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
+                    Text(text = "🏗️", fontSize = 28.sp)
                 }
             }
+            
+            Spacer(modifier = Modifier.height(12.dp))
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // 4. RECENT REPORTS (آخرین گزارش‌های ثبت‌شده)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "🗂️ آخرین گزارش‌های ثبت‌شده",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Text(
-                    text = "همه گزارش‌ها ←",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.clickable { onViewReportsTab() }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (reports.isEmpty()) {
+            // 3. Live Weather Card 2026 (Open-Meteo Integration)
+            if (weatherEnabled && cityName.isNotEmpty()) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        .padding(horizontal = 16.dp)
+                        .clickable { showForecastDialog = true },
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isDarkMode) Color(0xFF131B2A) else Color.White
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        if (isDarkMode) Color(0x5910B981) else Color(0x6610B981)
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
                 ) {
-                    Box(modifier = Modifier.padding(20.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text("هنوز گزارشی ثبت نشده است. با دکمه ثبت گزارش شروع کنید.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            } else {
-                reports.take(4).forEach { rep ->
-                    val repUnit = when (rep.reportType) {
-                        "WAREHOUSE" -> "انبار"
-                        "TECHNICAL" -> "دفتر فنی"
-                        "HSE" -> "HSE"
-                        "SURVEY" -> "نقشه‌برداری"
-                        "LEGAL" -> "حقوقی"
-                        else -> "اجرایی"
-                    }
-                    val mainActivity = rep.tasks.firstOrNull()?.description?.ifBlank { null }
-                        ?: rep.project.ifBlank { "عملیات اجرایی کارگاه" }
-                    val kmText = if (rep.startKm.isNotBlank() && rep.endKm.isNotBlank()) {
-                        "کیلومتر ${rep.startKm} الی ${rep.endKm}"
-                    } else if (rep.preparedBy.isNotBlank()) {
-                        "تهیه‌کننده: ${rep.preparedBy}"
-                    } else {
-                        "پروژه: ${rep.project}"
-                    }
-
-                    Card(
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 4.dp)
-                            .clickable { viewModel.selectReport(rep.id) },
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(7.dp))
-                                        .padding(horizontal = 7.dp, vertical = 3.dp)
-                                ) {
-                                    Text(
-                                        text = "👷 واحد $repUnit • #${toPersianDigits(rep.reportNumber)}",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                            .background(
+                                brush = if (isDarkMode) {
+                                    Brush.linearGradient(
+                                        colors = listOf(Color(0x3310B981), Color(0xFF131B2A))
+                                    )
+                                } else {
+                                    Brush.linearGradient(
+                                        colors = listOf(Color.White, Color(0xFFF0FDF4))
                                     )
                                 }
-                                Text(
-                                    text = toPersianDigits(rep.date),
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(6.dp))
-
-                            Text(
-                                text = mainActivity,
-                                fontSize = 12.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
                             )
-
-                            Spacer(modifier = Modifier.height(2.dp))
-
-                            Text(
-                                text = kmText,
-                                fontSize = 10.5.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                            Spacer(modifier = Modifier.height(6.dp))
-
+                            .padding(16.dp)
+                    ) {
+                        Column {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Box(
-                                        modifier = Modifier
-                                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(6.dp))
-                                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                                    ) {
-                                        Text("🛠️ ${toPersianDigits(rep.tasks.size)} فعالیت", fontSize = 9.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Column {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            Icons.Default.LocationOn, 
+                                            contentDescription = null, 
+                                            modifier = Modifier.size(15.dp), 
+                                            tint = if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "ایستگاه $cityName", 
+                                            fontSize = 12.5.sp, 
+                                            fontWeight = FontWeight.Bold, 
+                                            color = if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669)
+                                        )
                                     }
-                                    Box(
-                                        modifier = Modifier
-                                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(6.dp))
-                                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                                    ) {
-                                        Text("🚜 ${toPersianDigits(rep.machinery.size)} دستگاه", fontSize = 9.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                    if (rep.photos.isNotEmpty()) {
-                                        Box(
-                                            modifier = Modifier
-                                                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(6.dp))
-                                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                                        ) {
-                                            Text("📷 ${toPersianDigits(rep.photos.size)} عکس", fontSize = 9.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    
+                                    if (currentWeather != null) {
+                                        val temp = currentWeather!!.temperature.toInt()
+                                        Row(verticalAlignment = Alignment.Top) {
+                                            Text(
+                                                text = toPersianDigits(temp),
+                                                fontSize = 32.sp,
+                                                fontWeight = FontWeight.Black,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Text(
+                                                text = "°C",
+                                                fontSize = 16.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669),
+                                                modifier = Modifier.padding(top = 4.dp, start = 2.dp)
+                                            )
                                         }
+                                        
+                                        val code = dailyForecast?.weatherCode?.firstOrNull() ?: currentWeather!!.weatherCode
+                                        val (_, wDesc) = com.example.weather.WeatherRepository.getWeatherCodeInfo(code, currentWeather!!.isDay == 1)
+                                        Text(
+                                            text = "$wDesc با وزش باد ملایم",
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    } else {
+                                        Text("در حال دریافت اطلاعات اقلیمی...", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
 
-                                Button(
-                                    onClick = {
-                                        viewModel.generateAndSharePdf(context, rep) { success ->
-                                            if (!success) Toast.makeText(context, "خطا در خروجی PDF ❌", Toast.LENGTH_SHORT).show()
-                                        }
-                                    },
-                                    shape = RoundedCornerShape(7.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                    ),
-                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 3.dp),
-                                    modifier = Modifier.height(26.dp)
-                                ) {
-                                    Text("PDF 📄", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                if (isWeatherLoading && currentWeather == null) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(28.dp),
+                                        strokeWidth = 2.dp,
+                                        color = if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669)
+                                    )
+                                } else if (currentWeather != null) {
+                                    val code = dailyForecast?.weatherCode?.firstOrNull() ?: currentWeather!!.weatherCode
+                                    val (wIcon, _) = com.example.weather.WeatherRepository.getWeatherCodeInfo(code, currentWeather!!.isDay == 1)
+                                    Text(text = wIcon, fontSize = 38.sp)
                                 }
                             }
-                        }
-                    }
-                }
-            }
 
-            Spacer(modifier = Modifier.height(40.dp))
-        }
-
-        // Floating Action Button
-        FloatingActionButton(
-            onClick = {
-                val typeToUse = if (defaultReportType == "ASK" || defaultReportType.isEmpty()) "EXECUTION" else defaultReportType
-                onCreateReport(typeToUse)
-            },
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 20.dp, bottom = 20.dp),
-            containerColor = Color(0xFF1E3A8A),
-            contentColor = Color.White,
-            shape = RoundedCornerShape(16.dp),
-            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp)
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text("➕", fontSize = 15.sp)
-                Text("ثبت گزارش", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
-            }
-        }
-
-        // 7-day forecast dialog
-        if (showForecastDialog && dailyForecast != null) {
-            AlertDialog(
-                onDismissRequest = { showForecastDialog = false },
-                title = { Text("پیش‌بینی وضعیت جوی کارگاه", fontWeight = FontWeight.Bold) },
-                text = {
-                    LazyColumn {
-                        items(dailyForecast!!.time.size) { i ->
-                            val (icon, desc) = com.example.weather.WeatherRepository.getWeatherCodeInfo(dailyForecast!!.weatherCode[i], true)
-                            val rain = if (dailyForecast!!.rainSum.size > i) dailyForecast!!.rainSum[i] else 0.0
-                            val uv = if (dailyForecast!!.uvIndexMax.size > i) dailyForecast!!.uvIndexMax[i] else 0.0
-
-                            Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                            if (currentWeather != null) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                HorizontalDivider(
+                                    color = if (isDarkMode) Color(0x3310B981) else Color(0xFFBBF7D0),
+                                    thickness = 1.dp
+                                )
+                                Spacer(modifier = Modifier.height(10.dp))
+                                
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(formatGregorianToJalali(dailyForecast!!.time[i]), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(desc, fontSize = 12.sp, modifier = Modifier.padding(end = 8.dp))
-                                        Text(icon, fontSize = 16.sp)
+                                        Text("💨", fontSize = 12.sp)
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("${toPersianDigits(currentWeather!!.windSpeed.toInt())} km/h", fontSize = 11.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
-                                    Text("${dailyForecast!!.minTemp[i].toInt()}° / ${dailyForecast!!.maxTemp[i].toInt()}°", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                }
-                                if (rain > 0 || uv > 5) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                                        horizontalArrangement = Arrangement.Start
-                                    ) {
-                                        if (rain > 0) Text("🌧️ بارش: $rain mm", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(end = 8.dp))
-                                        if (uv > 5) Text("☀️ UV: $uv", fontSize = 10.sp, color = MaterialTheme.colorScheme.error)
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text("💧", fontSize = 12.sp)
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("رطوبت ۲۱٪", fontSize = 11.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text("🛡️", fontSize = 12.sp)
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("مناسب پایپینگ", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669))
                                     }
                                 }
                             }
-                            if (i < dailyForecast!!.time.size - 1) {
-                                HorizontalDivider()
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // 4. Bento Grid (2 Cards: Reports Counter & Aggregated Active Workers on Latest Workday)
+            val latestNormalizedDate = remember(reports) {
+                reports.map { persianDigitsToEnglish(it.date.trim()) }
+                    .filter { it.isNotEmpty() }
+                    .maxOrNull() ?: ""
+            }
+            val latestDayReports = remember(reports, latestNormalizedDate) {
+                if (latestNormalizedDate.isNotEmpty()) {
+                    reports.filter { persianDigitsToEnglish(it.date.trim()) == latestNormalizedDate }
+                } else {
+                    listOfNotNull(reports.firstOrNull())
+                }
+            }
+            val activeWorkersCount = remember(latestDayReports) {
+                latestDayReports.sumOf { rep ->
+                    rep.manpower.filter { !it.isOnLeave }.sumOf { it.count }
+                }
+            }
+            val companyWorkersCount = remember(latestDayReports) {
+                latestDayReports.sumOf { rep ->
+                    rep.manpower.filter { !it.isOnLeave && !it.role.contains("[پیمانکار]") }.sumOf { it.count }
+                }
+            }
+            val contractorWorkersCount = remember(latestDayReports) {
+                latestDayReports.sumOf { rep ->
+                    rep.manpower.filter { !it.isOnLeave && it.role.contains("[پیمانکار]") }.sumOf { it.count }
+                }
+            }
+            val latestDateDisplay = remember(latestDayReports) {
+                toPersianDigits(latestDayReports.firstOrNull()?.date ?: "")
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Bento Cell 1: Total & Latest Day Reports
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onViewReportsTab() },
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Description,
+                                contentDescription = null,
+                                tint = if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "گزارش‌های ثبت‌شده",
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        
+                        Text(
+                            text = toPersianDigits(reportsCount),
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                        
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.TrendingUp,
+                                contentDescription = null,
+                                tint = if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = if (latestDayReports.isNotEmpty()) "${toPersianDigits(latestDayReports.size)} گزارش در روز آخر" else "بدون گزارش",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669)
+                            )
+                        }
+                    }
+                }
+
+                // Bento Cell 2: Aggregated Active Workforce across all reports of Latest Workday
+                Card(
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Groups,
+                                    contentDescription = null,
+                                    tint = if (isDarkMode) Color(0xFFF59E0B) else Color(0xFFD97706),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "مجموع نیروی فعال",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            if (latestDateDisplay.isNotEmpty()) {
+                                Text(
+                                    text = latestDateDisplay,
+                                    fontSize = 9.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        
+                        Text(
+                            text = "${toPersianDigits(activeWorkersCount)} نفر",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                        
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.People,
+                                contentDescription = null,
+                                tint = if (isDarkMode) Color(0xFFF59E0B) else Color(0xFFD97706),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = if (activeWorkersCount > 0) {
+                                    "شرکت: ${toPersianDigits(companyWorkersCount)} • پیمانکار: ${toPersianDigits(contractorWorkersCount)}"
+                                } else {
+                                    "بدون پرسنل حاضر"
+                                },
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isDarkMode) Color(0xFFF59E0B) else Color(0xFFD97706),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 4.5 Smart Engineering Units Status Card (Color-Coded per Department)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DashboardCustomize,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "وضعیت واحدها در آخرین روز کاری",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Text(
+                            text = if (latestDateDisplay.isNotEmpty()) "تاریخ: $latestDateDisplay" else "ثبت سریع واحدها",
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    val unitItems = listOf(
+                        Triple("EXECUTION", "اجرایی", Color(0xFF059669)),
+                        Triple("TECHNICAL", "دفتر فنی", Color(0xFF0284C7)),
+                        Triple("HSE", "ایمنی HSE", Color(0xFFE11D48)),
+                        Triple("WAREHOUSE", "انبار", Color(0xFFD97706)),
+                        Triple("SURVEY", "نقشه‌برداری", Color(0xFF0D9488)),
+                        Triple("LEGAL", "حقوقی", Color(0xFF4F46E5))
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        unitItems.forEach { (uCode, uTitle, uColor) ->
+                            val matchingReport = latestDayReports.firstOrNull { it.reportType == uCode }
+                            val isSubmitted = matchingReport != null
+                            val unitWorkers = matchingReport?.manpower?.filter { !it.isOnLeave }?.sumOf { it.count } ?: 0
+                            Surface(
+                                onClick = {
+                                    if (matchingReport != null) {
+                                        viewModel.selectReport(matchingReport.id)
+                                    } else {
+                                        onCreateReport(uCode)
+                                        Toast.makeText(context, "گزارش جدید واحد $uTitle ایجاد شد 📝", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isSubmitted) uColor.copy(alpha = 0.14f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (isSubmitted) uColor.copy(alpha = 0.55f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .background(
+                                                if (isSubmitted) uColor else Color.Gray.copy(alpha = 0.45f),
+                                                CircleShape
+                                            )
+                                    )
+                                    Column {
+                                        Text(
+                                            text = uTitle,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isSubmitted) uColor else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = if (isSubmitted) {
+                                                if (unitWorkers > 0) "ثبت‌شده (${toPersianDigits(unitWorkers)} نفر)" else "ثبت‌شده ✓"
+                                            } else {
+                                                "+ ثبت گزارش"
+                                            },
+                                            fontSize = 9.5.sp,
+                                            color = if (isSubmitted) uColor.copy(alpha = 0.9f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // 5. Quick Launch Action Banner 2026
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .clickable {
+                        if (defaultReportType == "ASK" || defaultReportType.isEmpty()) {
+                            showCreateReportDialog = true
+                        } else {
+                            onCreateReport(defaultReportType)
+                            Toast.makeText(context, "گزارش روزانه جدید ایجاد شد 📝", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isDarkMode) Color(0xFF131B2A) else Color(0xFFECFDF5)
+                ),
+                border = BorderStroke(
+                    1.dp,
+                    if (isDarkMode) Color(0x4D06B6D4) else Color(0x6606B6D4)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "ثبت گزارش شیفت امروز 📝",
+                            fontSize = 14.5.sp,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(
+                            text = "ثبت احجام کاری، ورود مصالح، ماشین‌آلات و پرسنل",
+                            fontSize = 11.5.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .background(
+                                if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669),
+                                RoundedCornerShape(12.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "ثبت جدید",
+                            tint = if (isDarkMode) Color.Black else Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // 6. Recent Activities Stream (Compose Timeline)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(4.dp)
+                            .height(14.dp)
+                            .background(
+                                if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669),
+                                RoundedCornerShape(99.dp)
+                            )
+                    )
+                    Text(
+                        text = "آخرین فعالیت‌های ثبت‌شده", 
+                        fontSize = 14.5.sp, 
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Surface(
+                    onClick = { onViewReportsTab() },
+                    shape = RoundedCornerShape(99.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                ) {
+                    Text(
+                        text = "مشاهده همه",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            }
+            
+            if (reports.isEmpty()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                ) {
+                    Text(
+                        text = "هنوز هیچ گزارشی در کارگاه ثبت نگردیده است.", 
+                        fontSize = 13.sp, 
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, 
+                        modifier = Modifier.padding(20.dp)
+                    )
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    reports.take(5).forEach { report ->
+                        var showItemMenu by remember { mutableStateOf(false) }
+                        
+                        val reportCategory = report.reportType
+                        val categoryIcon = when (reportCategory) {
+                            "WAREHOUSE" -> Icons.Default.Inventory2
+                            "TECHNICAL" -> Icons.Default.Architecture
+                            "HSE" -> Icons.Default.Security
+                            "SURVEY" -> Icons.Default.Map
+                            "LEGAL" -> Icons.Default.Gavel
+                            "CUSTOM" -> Icons.Default.SettingsSuggest
+                            else -> Icons.Default.Construction
+                        }
+                        val categoryColor = when (reportCategory) {
+                            "WAREHOUSE" -> if (isDarkMode) Color(0xFFF59E0B) else Color(0xFFD97706)
+                            "TECHNICAL" -> if (isDarkMode) Color(0xFF06B6D4) else Color(0xFF0284C7)
+                            "HSE" -> if (isDarkMode) Color(0xFFF43F5E) else Color(0xFFE11D48)
+                            "SURVEY" -> if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669)
+                            "LEGAL" -> if (isDarkMode) Color(0xFF6366F1) else Color(0xFF4F46E5)
+                            else -> if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669)
+                        }
+
+                        val unitDisplayTitle = when (reportCategory) {
+                            "WAREHOUSE" -> "انبارداری"
+                            "TECHNICAL" -> "دفتر فنی"
+                            "HSE" -> "ایمنی HSE"
+                            "SURVEY" -> "نقشه‌برداری"
+                            "LEGAL" -> "حقوقی"
+                            "CUSTOM" -> "سفارشی"
+                            else -> "اجرایی"
+                        }
+
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { 
+                                    viewModel.selectReport(report.id)
+                                },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                // Avatar tile
+                                Box(
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .background(
+                                            categoryColor.copy(alpha = 0.15f),
+                                            RoundedCornerShape(12.dp)
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = categoryIcon,
+                                        contentDescription = null,
+                                        tint = categoryColor,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+
+                                // Details
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = if (report.tasks.firstOrNull()?.description?.isNotBlank() == true) {
+                                                report.tasks.first().description
+                                            } else {
+                                                "گزارش روزانه (${report.date})"
+                                            }, 
+                                            fontSize = 13.5.sp, 
+                                            fontWeight = FontWeight.Bold, 
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Text(
+                                            text = report.date,
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(3.dp))
+                                    Text(
+                                        text = if (report.preparedBy.isNotBlank()) "واحد: $unitDisplayTitle • ${report.preparedBy}" else "پروژه: ${report.project.ifEmpty { "خط انتقال گاز" }}", 
+                                        fontSize = 11.5.sp, 
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+
+                                // 3-Dots Menu Box
+                                Box {
+                                    IconButton(
+                                        onClick = { showItemMenu = true },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.MoreVert,
+                                            contentDescription = "گزینه‌ها",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+
+                                    DropdownMenu(
+                                        expanded = showItemMenu,
+                                        onDismissRequest = { showItemMenu = false }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text("ویرایش گزارش", fontSize = 12.5.sp, fontWeight = FontWeight.Bold) },
+                                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = Color(0xFF059669), modifier = Modifier.size(18.dp)) },
+                                            onClick = {
+                                                showItemMenu = false
+                                                viewModel.selectReport(report.id)
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("تکثیر گزارش", fontSize = 12.5.sp, fontWeight = FontWeight.Bold) },
+                                            leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null, tint = Color(0xFFD97706), modifier = Modifier.size(18.dp)) },
+                                            onClick = {
+                                                showItemMenu = false
+                                                viewModel.duplicateReport(report)
+                                                Toast.makeText(context, "گزارش با موفقیت تکثیر شد 📋", Toast.LENGTH_SHORT).show()
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("حذف گزارش", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE11D48)) },
+                                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFE11D48), modifier = Modifier.size(18.dp)) },
+                                            onClick = {
+                                                showItemMenu = false
+                                                viewModel.deleteReport(report)
+                                                Toast.makeText(context, "گزارش حذف شد 🗑️", Toast.LENGTH_SHORT).show()
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(115.dp))
+        }
+
+        // 7-day Weather Forecast Dialog
+        if (showForecastDialog && dailyForecast != null) {
+            AlertDialog(
+                onDismissRequest = { showForecastDialog = false },
+                title = {
+                    Text(
+                        text = "پیش‌بینی ۷ روزه آب و هوای کارگاه",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                },
+                text = {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val dates = dailyForecast!!.time
+                        val minTemps = dailyForecast!!.minTemp
+                        val maxTemps = dailyForecast!!.maxTemp
+                        val codes = dailyForecast!!.weatherCode
+                        
+                        dates.forEachIndexed { i, d ->
+                            if (i < minTemps.size && i < maxTemps.size && i < codes.size) {
+                                val (icon, desc) = com.example.weather.WeatherRepository.getWeatherCodeInfo(codes[i], isDay = true)
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(toPersianDigits(d), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(icon, fontSize = 18.sp)
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(desc, fontSize = 11.sp, color = Color(0xFF64748B))
+                                        }
+                                        Text("${minTemps[i].toInt()}° / ${maxTemps[i].toInt()}°", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
                             }
                         }
                     }
                 },
                 confirmButton = {
-                    TextButton(onClick = { showForecastDialog = false }) {
-                        Text("بستن")
+                    Button(
+                        onClick = { showForecastDialog = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("بستن پنجره", fontWeight = FontWeight.Bold)
                     }
-                }
+                },
+                shape = RoundedCornerShape(20.dp),
+                containerColor = Color.White
             )
         }
     }
@@ -1326,21 +1469,20 @@ fun ProjectSettingsTab(
     var defaultWeather by remember(backupRestored) { mutableStateOf(viewModel.sharedPreferences.getString("default_weather", "") ?: "") }
     var defaultReportType by remember(backupRestored) { mutableStateOf(viewModel.sharedPreferences.getString("default_report_type", "") ?: "") }
     var defaultAppTheme by remember(backupRestored) { mutableStateOf(viewModel.sharedPreferences.getString("app_theme", "LIGHT") ?: "LIGHT") }
-    var baseReportNumber by remember(backupRestored) { mutableStateOf(viewModel.getBaseReportNumber().toString()) }
 
     var userSignatureBase64 by remember(backupRestored) { mutableStateOf(viewModel.sharedPreferences.getString("user_signature", "") ?: "") }
     var showSignaturePadDialog by remember { mutableStateOf(false) }
 
-    var isBasicInfoExpanded by remember { mutableStateOf(true) }
+    var isBasicInfoExpanded by remember { mutableStateOf(false) }
     var isWeatherExpanded by remember { mutableStateOf(false) }
     var isThemeExpanded by remember { mutableStateOf(false) }
     var isReportExpanded by remember { mutableStateOf(false) }
     var isAdvancedExpanded by remember { mutableStateOf(false) }
 
     // Weather states
-    var weatherCityName by remember(backupRestored) { mutableStateOf(viewModel.sharedPreferences.getString("weather_city_name", "بابل") ?: "بابل") }
-    var weatherLatitude by remember(backupRestored) { mutableStateOf(viewModel.sharedPreferences.getFloat("weather_latitude", 36.5513f)) }
-    var weatherLongitude by remember(backupRestored) { mutableStateOf(viewModel.sharedPreferences.getFloat("weather_longitude", 52.6789f)) }
+    var weatherCityName by remember(backupRestored) { mutableStateOf(viewModel.sharedPreferences.getString("weather_city_name", "") ?: "") }
+    var weatherLatitude by remember(backupRestored) { mutableStateOf(viewModel.sharedPreferences.getFloat("weather_latitude", 0f)) }
+    var weatherLongitude by remember(backupRestored) { mutableStateOf(viewModel.sharedPreferences.getFloat("weather_longitude", 0f)) }
     var weatherEnabled by remember(backupRestored) { mutableStateOf(viewModel.sharedPreferences.getBoolean("weather_enabled", true)) }
     var weatherForecastEnabled by remember(backupRestored) { mutableStateOf(viewModel.sharedPreferences.getBoolean("weather_forecast_enabled", true)) }
     var weatherAutoUpdate by remember(backupRestored) { mutableStateOf(viewModel.sharedPreferences.getBoolean("weather_auto_update", true)) }
@@ -1459,14 +1601,14 @@ fun ProjectSettingsTab(
                         modifier = Modifier.padding(start = 12.dp)
                     ) {
                         Text(
-                            text = "تنظیمات ثابت کارگاه (نسخه ۳.۱.۰)",
+                            text = "تنظیمات سامانه",
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp,
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "این مشخصات یک‌بار تنظیم می‌شوند و در تمامی گزارش‌های روزانه به‌صورت خودکار درج می‌گردند.",
+                            text = "برای ثبت گزارش جدید، اطلاعات زیر را وارد کنید.",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1479,7 +1621,7 @@ fun ProjectSettingsTab(
                 ) {
                     // Section 1: مشخصات پایه کارگاه
                     ExpandableSettingsGroup(
-                        title = "مشخصات پایه و ثابت کارگاه",
+                        title = "مشخصات پایه کارگاه",
                         icon = Icons.Default.Domain,
                         isExpanded = isBasicInfoExpanded,
                         onToggle = { isBasicInfoExpanded = !isBasicInfoExpanded }
@@ -1489,7 +1631,7 @@ fun ProjectSettingsTab(
                             SettingsTextFieldWithIcon(
                                 value = defaultProject,
                                 onValueChange = { defaultProject = it },
-                                label = "نام پروژه (ثابت)",
+                                label = "نام پروژه",
                                 icon = Icons.Default.Article,
                                 isRequired = true
                             )
@@ -1498,7 +1640,7 @@ fun ProjectSettingsTab(
                             SettingsTextFieldWithIcon(
                                 value = defaultSection,
                                 onValueChange = { defaultSection = it },
-                                label = "واحد سازمانی گزارش‌دهنده (ثابت)",
+                                label = "بخش/واحد کاری",
                                 icon = Icons.Default.Description,
                                 isRequired = true
                             )
@@ -1507,17 +1649,8 @@ fun ProjectSettingsTab(
                             SettingsTextFieldWithIcon(
                                 value = defaultPreparedBy,
                                 onValueChange = { defaultPreparedBy = it },
-                                label = "نام سرپرست / تنظیم‌کننده گزارش (ثابت)",
+                                label = "تنظیم کننده گزارش",
                                 icon = Icons.Default.Person,
-                                isRequired = true
-                            )
-
-                            // Base Report Number (starting from 100)
-                            SettingsTextFieldWithIcon(
-                                value = baseReportNumber,
-                                onValueChange = { baseReportNumber = it },
-                                label = "شماره گزارش پایه (شروع شمارش خودکار، پیش‌فرض ۱۰۰)",
-                                icon = Icons.Default.Numbers,
                                 isRequired = true
                             )
 
@@ -1525,7 +1658,7 @@ fun ProjectSettingsTab(
                             SettingsTextFieldWithIcon(
                                 value = customUnitTitle,
                                 onValueChange = { customUnitTitle = it },
-                                label = "عنوان واحد سفارشی (سایر واحدها)",
+                                label = "سایر واحدها (گزارش نوع پنجم)",
                                 icon = Icons.Default.People
                             )
                         }
@@ -1887,19 +2020,10 @@ fun ProjectSettingsTab(
                 // Bottom Full-width save button
                 Button(
                     onClick = {
-                        val normalizedNumStr = baseReportNumber.map { ch ->
-                            when (ch) {
-                                in '۰'..'۹' -> '0' + (ch - '۰')
-                                in '٠'..'٩' -> '0' + (ch - '٠')
-                                else -> ch
-                            }
-                        }.joinToString("").trim()
-                        val parsedBaseNum = normalizedNumStr.toIntOrNull() ?: 100
                         viewModel.sharedPreferences.edit()
                             .putString("default_project", defaultProject)
                             .putString("default_section", defaultSection)
                             .putString("default_prepared_by", defaultPreparedBy)
-                            .putInt("base_report_number", parsedBaseNum)
                             .putString("custom_unit_title", customUnitTitle)
                             .putString("default_weather", defaultWeather)
                             .putString("default_report_type", defaultReportType)
@@ -1912,7 +2036,7 @@ fun ProjectSettingsTab(
                             .putBoolean("weather_auto_update", weatherAutoUpdate)
                             .apply()
 
-                        Toast.makeText(context, "تنظیمات ثابت کارگاه با موفقیت ذخیره شد ✅", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "تنظیمات با موفقیت ذخیره و نهایی شد ✅", Toast.LENGTH_SHORT).show()
                         focusManager.clearFocus()
                     },
                     modifier = Modifier
@@ -1937,51 +2061,6 @@ fun ProjectSettingsTab(
                         Icon(Icons.Default.Check, null, modifier = Modifier.size(20.dp))
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // About App & Logo Card (BuildReport v3.1.0)
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(Color(0xFF0F172A))
-                                .padding(4.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_app_logo),
-                                contentDescription = "BuildReport Logo",
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                        Text(
-                            text = "گزارش روزانه کارگاه (BuildReport) — نسخه 3.1.0",
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 13.5.sp,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "طراحی اختصاصی با آیکن تطبیقی مهندسی، خروجی استاندارد PDF و ذخیره آفلاین",
-                            fontSize = 11.sp,
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
             }
         }
     }
@@ -2249,16 +2328,15 @@ fun AboutAppTab(viewModel: ReportViewModel) {
                 Box(
                     modifier = Modifier
                         .size(80.dp)
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(Color(0xFF0F172A))
-                        .shadow(4.dp, RoundedCornerShape(18.dp))
-                        .padding(4.dp),
+                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(18.dp))
+                        .shadow(4.dp, RoundedCornerShape(18.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_app_logo),
-                        contentDescription = "BuildReport Logo",
-                        modifier = Modifier.fillMaxSize()
+                    Icon(
+                        imageVector = Icons.Default.Engineering,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(46.dp)
                     )
                 }
                 
@@ -2276,7 +2354,7 @@ fun AboutAppTab(viewModel: ReportViewModel) {
                     shape = CircleShape
                 ) {
                     Text(
-                        text = "نسخه ۳.۱.۰",
+                        text = "نسخه ۴.۱.۰",
                         color = Color.White,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
@@ -2320,7 +2398,7 @@ fun AboutAppTab(viewModel: ReportViewModel) {
                 ) {
                     // Paragraph 1
                     Text(
-                        text = "برنامه گزارشیار ابزار هوشمند مهندسی برای جمع‌آوری، ثبت، پیگیری و مدیریت گزارش‌های روزانه و مستندات کارگاهی است.",
+                        text = "سامانه گزارش یار ابزار هوشمند مهندسی برای جمع‌آوری، ثبت، پیگیری و مدیریت گزارش‌های روزانه و مستندات کارگاهی است.",
                         fontSize = 13.5.sp,
                         color = MaterialTheme.colorScheme.onSurface,
                         lineHeight = 24.sp,
@@ -2329,22 +2407,36 @@ fun AboutAppTab(viewModel: ReportViewModel) {
                     
                     // Paragraph 2
                     Text(
-                        text = "با کمک این سیستم، می‌توانید گزارش‌های خود را ثبت کرده و خروجی‌های PDF دقیق و استاندارد تولید کنید.",
+                        text = "با کمک این سیستم، می‌توانید گزارش‌های تمام واحدهای اجرایی، فنی، ایمنی، حقوقی، نقشه‌برداری و انبار را متناسب با ساختار تخصصی هر واحد ثبت کرده و خروجی‌های PDF رسمی و استاندارد تولید کنید.",
                         fontSize = 13.5.sp,
                         color = MaterialTheme.colorScheme.onSurface,
                         lineHeight = 24.sp,
                         textAlign = TextAlign.Justify
                     )
                     
-                    Text(
-                        text = "✨ قابلیت‌های جدید (نسخه ۳.۱.۰):\n- پروفایل ثابت کارگاه، واحد سازمانی، سرپرست و امضای دیجیتال در تنظیمات.\n- شماره‌گذاری خودکار گزارش‌ها از ۱۰۰ به بالا با قابلیت تنظیم پایه.\n- کپی هوشمند یک‌کلیکی فعالیت‌ها، نفرات و ماشین‌آلات از گزارش دیروز.\n- ثبت وضعیت حضور یا مرخصی نفرات با قابلیت تغییر سریع.\n- تعیین مالکیت ماشین‌آلات (شرکتی / استیجاری / پیمانکار) و توضیحات دستی.\n- جابجایی ردیف‌ها (بالا/پایین)، ویرایش و حذف در تمامی جداول.\n- ذخیره‌سازی ۱ ماهه تصاویر در حافظه دائمی همراه با واترمارک کارگاهی خودکار.",
-                        fontSize = 13.5.sp,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        lineHeight = 24.sp,
-                        textAlign = TextAlign.Justify
-                    )
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = "✨ قابلیت‌های جدید نگارش ۴.۱.۰:",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.5.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "• شخصی‌سازی هوشمند تب‌های فرم و جداول PDF متناسب با ماهیت هر واحد (حذف بخش‌های غیرمرتبط مانند مصالح و ماشین‌آلات از واحد حقوقی و دفتر فنی).\n• اصلاح محاسبه مجموع نفرات حاضر در داشبورد بر اساس تجمیع تمام گزارش‌های آخرین روز کاری به تفکیک شرکت و پیمانکار.\n• افزودن قابلیت کپی هوشمند لیست پرسنل و ماشین‌آلات از گزارش روز قبل با یک کلیک.\n• رابط مدرن مهندسی با تفکیک رنگی واحدها و نوار وضعیت هوشمند گزارش‌های روز آخر.",
+                                fontSize = 12.5.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                lineHeight = 22.sp,
+                                textAlign = TextAlign.Justify
+                            )
+                        }
+                    }
                     
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     
                     // Primary button
                     Button(
@@ -2353,7 +2445,7 @@ fun AboutAppTab(viewModel: ReportViewModel) {
                                 val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                     type = "message/rfc822"
                                     putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf("MOSTAFA5804@GMAIL.COM"))
-                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "ارتباط با سازنده سامانه گزارش یار - نسخه ۳.۱.۰")
+                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "ارتباط با سازنده سامانه گزارش یار - نگارش ۴")
                                     putExtra(android.content.Intent.EXTRA_TEXT, "با سلام و احترام،\n\n")
                                 }
                                 context.startActivity(android.content.Intent.createChooser(intent, "ارتباط با سازنده"))
@@ -2394,7 +2486,7 @@ fun AboutAppTab(viewModel: ReportViewModel) {
                                 val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                     type = "message/rfc822"
                                     putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf("MOSTAFA5804@GMAIL.COM"))
-                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "پشتیبان داده‌های کارگاه - نسخه ۳.۱.۰")
+                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "پشتیبان داده‌های کارگاه - نسخه ۴.۰.۰")
                                     putExtra(android.content.Intent.EXTRA_TEXT, "با سلام،\nپشتیبان اطلاعات پروژه‌های من در فایل پیوست قرار دارد.")
                                     putExtra(android.content.Intent.EXTRA_STREAM, fileUri)
                                     addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -2416,7 +2508,7 @@ fun AboutAppTab(viewModel: ReportViewModel) {
                         ) {
                             Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(20.dp))
                             Text(
-                                text = "ارسال مستقیم فایل پشتیبانی (JSON)",
+                                text = "ارسال مستقیم فایل پشتیبانی (JSON v4)",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp
                             )
@@ -2437,8 +2529,7 @@ enum class ReportViewMode { LIST, COMPACT, MONTHLY }
 @Composable
 fun ReportListScreen(
     viewModel: ReportViewModel,
-    onEditReport: (DailyReport) -> Unit,
-    onOpenSettings: () -> Unit = {}
+    onEditReport: (DailyReport) -> Unit
 ) {
     val context = LocalContext.current
     val reports by viewModel.filteredReports.collectAsStateWithLifecycle()
@@ -2446,15 +2537,10 @@ fun ReportListScreen(
     val isExporting by viewModel.isExporting.collectAsStateWithLifecycle()
     
     var viewMode by remember { mutableStateOf(ReportViewMode.LIST) }
-    var showFilterBar by remember { mutableStateOf(false) }
-    var selectedCategoryFilter by remember { mutableStateOf("ALL") }
     val customUnitTitle = remember { viewModel.sharedPreferences.getString("custom_unit_title", "سایر واحدها") ?: "سایر واحدها" }
     var showCreateDialog by remember { mutableStateOf(false) }
 
-    val displayedReports = remember(reports, selectedCategoryFilter) {
-        if (selectedCategoryFilter == "ALL") reports
-        else reports.filter { it.reportType == selectedCategoryFilter }
-    }
+    val displayedReports = reports
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Scaffold(
@@ -2474,7 +2560,9 @@ fun ReportListScreen(
                             .padding(horizontal = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = onOpenSettings) {
+                        IconButton(onClick = {
+                            Toast.makeText(context, "بخش تنظیمات کارگاه ⚙️", Toast.LENGTH_SHORT).show()
+                        }) {
                             Icon(Icons.Default.Settings, contentDescription = "تنظیمات کارگاه", tint = MaterialTheme.colorScheme.onPrimary)
                         }
                         
@@ -2532,7 +2620,7 @@ fun ReportListScreen(
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "همه گزارشهای ثبت شده (${toPersianDigits(displayedReports.size.toString())} مورد)",
+                        text = "همه گزارشهای ثبت شده",
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -2600,14 +2688,11 @@ fun ReportListScreen(
                     
                     IconButton(
                         onClick = {
-                            showFilterBar = !showFilterBar
+                            Toast.makeText(context, "فیلتر و مرتب‌سازی فعال است 🔍", Toast.LENGTH_SHORT).show()
                         },
                         modifier = Modifier
                             .size(48.dp)
-                            .background(
-                                if (showFilterBar || selectedCategoryFilter != "ALL") MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-                                CircleShape
-                            )
+                            .background(MaterialTheme.colorScheme.surface, CircleShape)
                             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
                     ) {
                         Icon(
@@ -2615,34 +2700,6 @@ fun ReportListScreen(
                             contentDescription = "فیلتر",
                             tint = MaterialTheme.colorScheme.primary
                         )
-                    }
-                }
-
-                if (showFilterBar) {
-                    val filterOptions = listOf(
-                        "ALL" to "همه واحدها",
-                        "EXECUTION" to "اجرایی 🔨",
-                        "TECHNICAL" to "دفتر فنی 📐",
-                        "WAREHOUSE" to "انبار 📦",
-                        "HSE" to "ایمنی 🛡️",
-                        "SURVEY" to "نقشه‌برداری 🗺️",
-                        "LEGAL" to "حقوقی ⚖️",
-                        "CUSTOM" to customUnitTitle
-                    )
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        filterOptions.forEach { (key, label) ->
-                            FilterChip(
-                                selected = selectedCategoryFilter == key,
-                                onClick = { selectedCategoryFilter = key },
-                                label = { Text(label, fontSize = 11.5.sp, fontWeight = FontWeight.Bold) }
-                            )
-                        }
                     }
                 }
 
@@ -2825,19 +2882,35 @@ fun ReportEditorScreen(
         "LEGAL" -> "حقوقی"
         "SURVEY" -> "نقشه‌برداری"
         "TECHNICAL" -> "دفتر فنی"
-        "HSE" -> "ایمنی"
+        "HSE" -> "ایمنی HSE"
         "CUSTOM" -> customUnitTitle
         else -> "اجرایی"
     }
 
-    var selectedTab by remember { mutableStateOf(0) }
+    val unitHeaderColor = when (currentReport.reportType) {
+        "WAREHOUSE" -> Color(0xFFB45309)
+        "LEGAL" -> Color(0xFF4338CA)
+        "SURVEY" -> Color(0xFF0F766E)
+        "TECHNICAL" -> Color(0xFF0369A1)
+        "HSE" -> Color(0xFFBE123C)
+        "CUSTOM" -> Color(0xFF6D28D9)
+        else -> MaterialTheme.colorScheme.primary
+    }
+
+    var selectedTab by remember(currentReport.reportType) { mutableStateOf(0) }
     val tabs = when (currentReport.reportType) {
         "LEGAL" -> listOf(
             "مشخصات پایه" to Icons.Default.Info,
             "تحصیل اراضی" to Icons.Default.Gavel,
             "مجوزهای قانونی" to Icons.Default.Assignment,
-            "ماشین‌آلات" to Icons.Default.DirectionsCar,
             "پرسنل حقوقی" to Icons.Default.People,
+            "گالری تصاویر" to Icons.Default.PhotoCamera,
+            "یادداشت‌ها" to Icons.Default.Edit
+        )
+        "TECHNICAL" -> listOf(
+            "مشخصات پایه" to Icons.Default.Info,
+            "فعالیت‌های فنی" to Icons.Default.Architecture,
+            "پرسنل دفتر فنی" to Icons.Default.People,
             "گالری تصاویر" to Icons.Default.PhotoCamera,
             "یادداشت‌ها" to Icons.Default.Edit
         )
@@ -2849,12 +2922,11 @@ fun ReportEditorScreen(
             "گالری تصاویر" to Icons.Default.PhotoCamera,
             "یادداشت‌ها" to Icons.Default.Edit
         )
-        "TECHNICAL" -> listOf(
+        "HSE" -> listOf(
             "مشخصات پایه" to Icons.Default.Info,
-            "فعالیت $currentUnitTitle" to Icons.Default.Description,
-            "مصالح $currentUnitTitle" to Icons.Default.Widgets,
-            "ماشین‌آلات" to Icons.Default.DirectionsCar,
-            "پرسنل $currentUnitTitle" to Icons.Default.People,
+            "اقدامات ایمنی" to Icons.Default.Security,
+            "تجهیزات ایمنی (PPE)" to Icons.Default.Inventory,
+            "پرسنل HSE" to Icons.Default.People,
             "گالری تصاویر" to Icons.Default.PhotoCamera,
             "یادداشت‌ها" to Icons.Default.Edit
         )
@@ -2862,7 +2934,7 @@ fun ReportEditorScreen(
             "مشخصات پایه" to Icons.Default.Info,
             "مصالح ورودی" to Icons.Default.ListAlt,
             "مصالح خروجی" to Icons.Default.LocalShipping,
-            "ماشین‌آلات" to Icons.Default.DirectionsCar,
+            "تجهیزات انبار" to Icons.Default.DirectionsCar,
             "پرسنل انبار" to Icons.Default.People,
             "گالری تصاویر" to Icons.Default.PhotoCamera,
             "یادداشت‌ها" to Icons.Default.Edit
@@ -2878,6 +2950,8 @@ fun ReportEditorScreen(
         )
     }
 
+    val safeSelectedTab = selectedTab.coerceIn(0, (tabs.size - 1).coerceAtLeast(0))
+
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Scaffold(
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -2885,27 +2959,32 @@ fun ReportEditorScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.primary)
+                        .background(unitHeaderColor)
                         .statusBarsPadding()
                 ) {
                     Column {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(onClick = onBack) {
-                                    Icon(Icons.Default.ArrowBack, "بازگشت", tint = MaterialTheme.colorScheme.onPrimary)
+                                    Icon(Icons.Default.ArrowBack, "بازگشت", tint = Color.White)
                                 }
                                 Column {
                                     Text(
-                                        text = "گزارش $currentUnitTitle • #${toPersianDigits(currentReport.reportNumber.toString())} 📝",
+                                        text = "گزارش واحد $currentUnitTitle 📝",
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 14.5.sp,
-                                        color = MaterialTheme.colorScheme.onPrimary
+                                        fontSize = 15.sp,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = "تاریخ: ${toPersianDigits(currentReport.date)} • ${tabs.size.let { toPersianDigits(it) }} بخش تخصصی",
+                                        fontSize = 11.sp,
+                                        color = Color.White.copy(alpha = 0.85f)
                                     )
                                 }
                             }
@@ -2921,7 +3000,7 @@ fun ReportEditorScreen(
                                         }
                                     }
                                 ) {
-                                    Icon(Icons.Default.Share, "اشتراک‌گذاری مستقیم", tint = MaterialTheme.colorScheme.onPrimary)
+                                    Icon(Icons.Default.Share, "اشتراک‌گذاری مستقیم", tint = Color.White)
                                 }
 
                                 // Print/Save local PDF
@@ -2934,7 +3013,7 @@ fun ReportEditorScreen(
                                         }
                                     }
                                 ) {
-                                    Icon(Icons.Default.Print, "چاپ / خروجی PDF", tint = MaterialTheme.colorScheme.onPrimary)
+                                    Icon(Icons.Default.Print, "چاپ / خروجی PDF", tint = Color.White)
                                 }
 
                                 IconButton(
@@ -2943,62 +3022,34 @@ fun ReportEditorScreen(
                                         Toast.makeText(context, "گزارش با موفقیت در دیتابیس ذخیره شد ✅", Toast.LENGTH_SHORT).show()
                                     }
                                 ) {
-                                    Icon(Icons.Default.Check, "ذخیره نهایی", tint = MaterialTheme.colorScheme.onPrimary)
+                                    Icon(Icons.Default.Check, "ذخیره نهایی", tint = Color.White)
                                 }
                             }
                         }
 
-                        // 2-Row Visible Tab Grid so all tabs (including Manpower, Photos, Notes) are visible without scrolling
-                        val splitIndex = (tabs.size + 1) / 2
-                        val tabRows = listOf(
-                            tabs.take(splitIndex).mapIndexed { idx, pair -> idx to pair },
-                            tabs.drop(splitIndex).mapIndexed { idx, pair -> (idx + splitIndex) to pair }
-                        )
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 8.dp, vertical = 6.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            tabRows.forEach { rowItems ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    rowItems.forEach { (index, item) ->
-                                        val (title, icon) = item
-                                        val isSelected = selectedTab == index
-                                        Surface(
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .clickable { selectedTab = index },
-                                            shape = RoundedCornerShape(10.dp),
-                                            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.14f)
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 7.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.Center
-                                            ) {
-                                                Icon(
-                                                    imageVector = icon,
-                                                    contentDescription = title,
-                                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else Color.White,
-                                                    modifier = Modifier.size(15.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(4.dp))
-                                                Text(
-                                                    text = title,
-                                                    fontSize = 10.5.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.White,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
-                                        }
-                                    }
+                        ScrollableTabRow(
+                            selectedTabIndex = safeSelectedTab,
+                            edgePadding = 8.dp,
+                            containerColor = Color.Transparent,
+                            indicator = { tabPositions ->
+                                if (safeSelectedTab < tabPositions.size) {
+                                    TabRowDefaults.Indicator(
+                                        Modifier.tabIndicatorOffset(tabPositions[safeSelectedTab]),
+                                        color = Color.White,
+                                        height = 3.dp
+                                    )
                                 }
+                            }
+                        ) {
+                            tabs.forEachIndexed { index, (title, icon) ->
+                                Tab(
+                                    selected = safeSelectedTab == index,
+                                    onClick = { selectedTab = index },
+                                    icon = { Icon(icon, contentDescription = title, modifier = Modifier.size(20.dp)) },
+                                    text = { Text(title, fontSize = 11.5.sp, fontWeight = FontWeight.Bold) },
+                                    selectedContentColor = Color.White,
+                                    unselectedContentColor = Color.White.copy(alpha = 0.65f)
+                                )
                             }
                         }
                     }
@@ -3018,34 +3069,56 @@ fun ReportEditorScreen(
                         .widthIn(max = 680.dp)
                         .align(Alignment.TopCenter)
                 ) {
-                    if (currentReport.reportType == "SURVEY") {
-                        when (selectedTab) {
-                            0 -> BaseInfoTabRedesigned(viewModel, currentReport, onNext = { selectedTab = 1 })
-                            1 -> TasksTabRedesigned(viewModel, currentReport)
-                            2 -> MachineryTabRedesigned(viewModel, currentReport)
-                            3 -> ManpowerTabRedesigned(viewModel, currentReport)
-                            4 -> PhotoGalleryTabRedesigned(viewModel, currentReport)
-                            5 -> NotesTabRedesigned(viewModel, currentReport, onBack)
+                    when (currentReport.reportType) {
+                        "LEGAL" -> {
+                            when (safeSelectedTab) {
+                                0 -> BaseInfoTabRedesigned(viewModel, currentReport, onNext = { selectedTab = 1 })
+                                1 -> TasksTabRedesigned(viewModel, currentReport)
+                                2 -> LegalPermitsTabRedesigned(viewModel, currentReport)
+                                3 -> ManpowerTabRedesigned(viewModel, currentReport)
+                                4 -> PhotoGalleryTabRedesigned(viewModel, currentReport)
+                                5 -> NotesTabRedesigned(viewModel, currentReport, onBack)
+                            }
                         }
-                    } else if (currentReport.reportType == "LEGAL") {
-                        when (selectedTab) {
-                            0 -> BaseInfoTabRedesigned(viewModel, currentReport, onNext = { selectedTab = 1 })
-                            1 -> TasksTabRedesigned(viewModel, currentReport)
-                            2 -> LegalPermitsTabRedesigned(viewModel, currentReport)
-                            3 -> MachineryTabRedesigned(viewModel, currentReport)
-                            4 -> ManpowerTabRedesigned(viewModel, currentReport)
-                            5 -> PhotoGalleryTabRedesigned(viewModel, currentReport)
-                            6 -> NotesTabRedesigned(viewModel, currentReport, onBack)
+                        "TECHNICAL" -> {
+                            when (safeSelectedTab) {
+                                0 -> BaseInfoTabRedesigned(viewModel, currentReport, onNext = { selectedTab = 1 })
+                                1 -> TasksTabRedesigned(viewModel, currentReport)
+                                2 -> ManpowerTabRedesigned(viewModel, currentReport)
+                                3 -> PhotoGalleryTabRedesigned(viewModel, currentReport)
+                                4 -> NotesTabRedesigned(viewModel, currentReport, onBack)
+                            }
                         }
-                    } else {
-                        when (selectedTab) {
-                            0 -> BaseInfoTabRedesigned(viewModel, currentReport, onNext = { selectedTab = 1 })
-                            1 -> TasksTabRedesigned(viewModel, currentReport)
-                            2 -> MaterialsTabRedesigned(viewModel, currentReport)
-                            3 -> MachineryTabRedesigned(viewModel, currentReport)
-                            4 -> ManpowerTabRedesigned(viewModel, currentReport)
-                            5 -> PhotoGalleryTabRedesigned(viewModel, currentReport)
-                            6 -> NotesTabRedesigned(viewModel, currentReport, onBack)
+                        "SURVEY" -> {
+                            when (safeSelectedTab) {
+                                0 -> BaseInfoTabRedesigned(viewModel, currentReport, onNext = { selectedTab = 1 })
+                                1 -> TasksTabRedesigned(viewModel, currentReport)
+                                2 -> MachineryTabRedesigned(viewModel, currentReport)
+                                3 -> ManpowerTabRedesigned(viewModel, currentReport)
+                                4 -> PhotoGalleryTabRedesigned(viewModel, currentReport)
+                                5 -> NotesTabRedesigned(viewModel, currentReport, onBack)
+                            }
+                        }
+                        "HSE" -> {
+                            when (safeSelectedTab) {
+                                0 -> BaseInfoTabRedesigned(viewModel, currentReport, onNext = { selectedTab = 1 })
+                                1 -> TasksTabRedesigned(viewModel, currentReport)
+                                2 -> MaterialsTabRedesigned(viewModel, currentReport)
+                                3 -> ManpowerTabRedesigned(viewModel, currentReport)
+                                4 -> PhotoGalleryTabRedesigned(viewModel, currentReport)
+                                5 -> NotesTabRedesigned(viewModel, currentReport, onBack)
+                            }
+                        }
+                        else -> {
+                            when (safeSelectedTab) {
+                                0 -> BaseInfoTabRedesigned(viewModel, currentReport, onNext = { selectedTab = 1 })
+                                1 -> TasksTabRedesigned(viewModel, currentReport)
+                                2 -> MaterialsTabRedesigned(viewModel, currentReport)
+                                3 -> MachineryTabRedesigned(viewModel, currentReport)
+                                4 -> ManpowerTabRedesigned(viewModel, currentReport)
+                                5 -> PhotoGalleryTabRedesigned(viewModel, currentReport)
+                                6 -> NotesTabRedesigned(viewModel, currentReport, onBack)
+                            }
                         }
                     }
                 }
@@ -3794,26 +3867,9 @@ fun MainAppScreen(
     val reports by viewModel.filteredReports.collectAsStateWithLifecycle()
     val currentReport by viewModel.currentReport.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val backupRestored by viewModel.backupRestoredEvent.collectAsState()
 
-    // 4 Bottom tabs: 0: داشبورد, 1: ثبت گزارش (opens editor), 2: بایگانی, 3: تنظیمات
+    // Navigation Tab state (0: Dashboard, 1: Reports Archive, 2: Settings, 3: About)
     var selectedTab by remember { mutableStateOf(0) }
-    var showLogoDialog by remember { mutableStateOf(false) }
-
-    val defaultReportType = remember(backupRestored) { viewModel.sharedPreferences.getString("default_report_type", "EXECUTION") ?: "EXECUTION" }
-    val customUnitTitle = remember(backupRestored) { viewModel.sharedPreferences.getString("custom_unit_title", "سایر واحدها") ?: "سایر واحدها" }
-    val activeUnitTitle = when (defaultReportType) {
-        "WAREHOUSE" -> "واحد انبار"
-        "TECHNICAL" -> "واحد دفتر فنی"
-        "HSE" -> "واحد ایمنی HSE"
-        "SURVEY" -> "واحد نقشه‌برداری"
-        "LEGAL" -> "واحد حقوقی"
-        "CUSTOM" -> customUnitTitle
-        else -> "واحد اجرایی"
-    }
-
-    val baseReportNum = viewModel.getBaseReportNumber()
-    val latestReportNum = if (reports.isNotEmpty()) reports.maxOf { it.reportNumber } else baseReportNum
 
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -3844,7 +3900,7 @@ fun MainAppScreen(
         if (uri != null) {
             try {
                 val exported = viewModel.exportBackup()
-                context.contentResolver.openOutputStream(uri)?.use {
+                context.contentResolver.openOutputStream(uri)?.use { 
                     it.write(exported.toByteArray())
                 }
                 Toast.makeText(context, "نسخه پشتیبان با موفقیت ذخیره شد ✅", Toast.LENGTH_SHORT).show()
@@ -3861,169 +3917,282 @@ fun MainAppScreen(
                 onBack = { viewModel.clearCurrentReport() }
             )
         } else {
-            Scaffold(
-                topBar = {
-                    BuildReportTopAppBar(
-                        activeUnit = activeUnitTitle,
-                        latestReportNumber = latestReportNum,
-                        isDarkMode = isDarkMode,
-                        onToggleTheme = onToggleTheme,
-                        onOpenLogoInfo = { showLogoDialog = true },
-                        onQuickPdf = {
-                            val target = reports.firstOrNull()
-                            if (target != null) {
-                                viewModel.generateAndSharePdf(context, target) { success ->
-                                    if (!success) Toast.makeText(context, "خطا در خروجی PDF ❌", Toast.LENGTH_SHORT).show()
-                                }
-                            } else {
-                                Toast.makeText(context, "هنوز هیچ گزارشی ثبت نشده است", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    )
-                },
-                bottomBar = {
-                    NavigationBar(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ) {
-                        NavigationBarItem(
-                            icon = { Icon(Icons.Default.Dashboard, contentDescription = "داشبورد") },
-                            label = { Text("داشبورد", fontSize = 10.5.sp, fontWeight = FontWeight.Bold) },
-                            selected = selectedTab == 0,
-                            onClick = { selectedTab = 0 },
-                            modifier = Modifier.testTag("nav_dashboard")
-                        )
-                        NavigationBarItem(
-                            icon = { Icon(Icons.Default.EditNote, contentDescription = "ثبت گزارش") },
-                            label = { Text("ثبت گزارش", fontSize = 10.5.sp, fontWeight = FontWeight.Bold) },
-                            selected = false,
-                            onClick = {
-                                val todayDate = viewModel.getTodayPersianDate()
-                                val existingToday = reports.firstOrNull { it.date == todayDate }
-                                if (existingToday != null) {
-                                    viewModel.selectReport(existingToday.id)
-                                } else {
-                                    val typeToUse = if (defaultReportType == "ASK" || defaultReportType.isEmpty()) "EXECUTION" else defaultReportType
-                                    viewModel.startNewReport(typeToUse)
-                                }
-                            },
-                            modifier = Modifier.testTag("nav_editor")
-                        )
-                        NavigationBarItem(
-                            icon = { Icon(Icons.Default.Folder, contentDescription = "بایگانی") },
-                            label = { Text("بایگانی", fontSize = 10.5.sp, fontWeight = FontWeight.Bold) },
-                            selected = selectedTab == 2,
-                            onClick = { selectedTab = 2 },
-                            modifier = Modifier.testTag("nav_archive")
-                        )
-                        NavigationBarItem(
-                            icon = { Icon(Icons.Default.Settings, contentDescription = "تنظیمات") },
-                            label = { Text("تنظیمات", fontSize = 10.5.sp, fontWeight = FontWeight.Bold) },
-                            selected = selectedTab == 3,
-                            onClick = { selectedTab = 3 },
-                            modifier = Modifier.testTag("nav_settings")
-                        )
-                    }
-                }
-            ) { innerPadding ->
+            var showGlobalCreateDialog by remember { mutableStateOf(false) }
+            val defaultReportType = remember { viewModel.sharedPreferences.getString("default_report_type", "ASK") ?: "ASK" }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                // Main Tab Content
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(innerPadding)
                         .imePadding()
-                        .background(MaterialTheme.colorScheme.background)
                 ) {
                     when (selectedTab) {
                         0 -> ProjectDashboardTab(
                             reportsCount = reports.size,
                             reports = reports,
                             viewModel = viewModel,
+                            isDarkMode = isDarkMode,
+                            onToggleTheme = onToggleTheme,
                             onCreateReport = { type ->
                                 viewModel.startNewReport(type)
                             },
                             onViewReportsTab = {
-                                selectedTab = 2
-                            },
-                            onOpenSettingsTab = {
-                                selectedTab = 3
+                                selectedTab = 1
                             }
                         )
-                        2 -> ReportListScreen(
+                        1 -> ReportListScreen(
                             viewModel = viewModel,
                             onEditReport = { report ->
                                 viewModel.selectReport(report.id)
-                            },
-                            onOpenSettings = {
-                                selectedTab = 3
                             }
                         )
-                        3 -> ProjectSettingsTab(
+                        2 -> ProjectSettingsTab(
                             viewModel = viewModel,
                             importLauncher = importLauncher,
                             exportLauncher = exportLauncher
                         )
+                        3 -> AboutAppTab(
+                            viewModel = viewModel
+                        )
                     }
                 }
+
+                // Floating Futuristic Bottom Dock 2026
+                FuturisticFloatingDock(
+                    selectedTab = selectedTab,
+                    onTabSelected = { selectedTab = it },
+                    onFabClick = {
+                        if (defaultReportType == "ASK" || defaultReportType.isEmpty()) {
+                            showGlobalCreateDialog = true
+                        } else {
+                            viewModel.startNewReport(defaultReportType)
+                            Toast.makeText(context, "گزارش روزانه جدید ایجاد شد 📝", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    isDarkMode = isDarkMode,
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
+            }
+
+            // Global Report Type Chooser Dialog (From Floating Dock FAB)
+            if (showGlobalCreateDialog) {
+                AlertDialog(
+                    onDismissRequest = { showGlobalCreateDialog = false },
+                    title = {
+                        Text(
+                            text = "ثبت گزارش جدید روزانه 📋",
+                            fontWeight = FontWeight.Black,
+                            fontSize = 16.sp,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center
+                        )
+                    },
+                    text = {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            val reportTypes = listOf(
+                                "EXECUTION" to "فعالیت‌های اجرایی 🔨",
+                                "WAREHOUSE" to "انباردار کارگاه 📦",
+                                "TECHNICAL" to "دفتر فنی کارگاه 📐",
+                                "HSE" to "ایمنی HSE 🛡️",
+                                "SURVEY" to "نقشه‌برداری کارگاه 🗺️",
+                                "LEGAL" to "حقوقی و تملک اراضی ⚖️",
+                                "CUSTOM" to (viewModel.sharedPreferences.getString("custom_unit_title", "سایر واحدها (سفارشی) ⚙️") ?: "سایر واحدها (سفارشی) ⚙️")
+                            )
+                            reportTypes.forEach { (type, label) ->
+                                Button(
+                                    onClick = {
+                                        showGlobalCreateDialog = false
+                                        viewModel.startNewReport(type)
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669),
+                                        contentColor = if (isDarkMode) Color.Black else Color.White
+                                    ),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(label, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {},
+                    dismissButton = {
+                        TextButton(
+                            onClick = { showGlobalCreateDialog = false },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("انصراف", color = if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669), fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    shape = RoundedCornerShape(22.dp),
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            }
+        }
+    }
+}
+
+// --- FLOATING FUTURISTIC BOTTOM DOCK COMPONENT (2026 Dual-Theme Titanium & Slate) ---
+@Composable
+fun FuturisticFloatingDock(
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit,
+    onFabClick: () -> Unit,
+    isDarkMode: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp, bottom = 14.dp),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        // Dock Glass Surface Capsule
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(66.dp),
+            shape = RoundedCornerShape(26.dp),
+            color = if (isDarkMode) Color(0xF0131B2A) else Color(0xEBFFFFFF),
+            border = BorderStroke(
+                1.dp, 
+                if (isDarkMode) Color(0x4D10B981) else Color(0x3310B981)
+            ),
+            shadowElevation = 14.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceAround
+            ) {
+                // 1. Dashboard Tab
+                DockItem(
+                    icon = Icons.Default.Dashboard,
+                    label = "داشبورد",
+                    isSelected = selectedTab == 0,
+                    isDarkMode = isDarkMode,
+                    onClick = { onTabSelected(0) },
+                    testTag = "nav_dashboard"
+                )
+
+                // 2. Reports Tab
+                DockItem(
+                    icon = Icons.Default.FolderOpen,
+                    label = "گزارش‌ها",
+                    isSelected = selectedTab == 1,
+                    isDarkMode = isDarkMode,
+                    onClick = { onTabSelected(1) },
+                    testTag = "nav_reports"
+                )
+
+                // 3. Center Gap for Protruding FAB
+                Spacer(modifier = Modifier.width(54.dp))
+
+                // 4. Settings Tab
+                DockItem(
+                    icon = Icons.Default.Tune,
+                    label = "تنظیمات",
+                    isSelected = selectedTab == 2,
+                    isDarkMode = isDarkMode,
+                    onClick = { onTabSelected(2) },
+                    testTag = "nav_settings"
+                )
+
+                // 5. About Tab
+                DockItem(
+                    icon = Icons.Default.Info,
+                    label = "درباره",
+                    isSelected = selectedTab == 3,
+                    isDarkMode = isDarkMode,
+                    onClick = { onTabSelected(3) },
+                    testTag = "nav_about"
+                )
             }
         }
 
-        // Logo Info Dialog (matching BuildReport_v3.1.0_Prototype.html)
-        if (showLogoDialog) {
-            AlertDialog(
-                onDismissRequest = { showLogoDialog = false },
-                title = {
-                    Text(
-                        "🎨 آیکن و لوگوی اختصاصی نسخه 3.1.0",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                },
-                text = {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(110.dp)
-                                .clip(RoundedCornerShape(24.dp))
-                                .background(Color(0xFF0F172A))
-                                .padding(6.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_app_logo),
-                                contentDescription = "BuildReport Logo v3.1.0",
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                        Text(
-                            text = "BuildReport v3.1.0 Adaptive Icon",
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "طراحی اختصاصی مهندسی شامل کلاه‌کارگاهی زرد ایمنی، چک‌لیست دیجیتال کارگاه، تیک تایید سبز و پس‌زمینه سرمه‌ای نقشه عمرانی.",
-                            fontSize = 12.sp,
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            lineHeight = 18.sp
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = { showLogoDialog = false },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("بستن", fontWeight = FontWeight.Bold)
-                    }
-                }
+        // Center Elevated Glowing Floating Action Button (FAB)
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .offset(y = (-15).dp)
+                .size(52.dp)
+                .shadow(12.dp, RoundedCornerShape(18.dp), spotColor = Color(0xFF10B981))
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(Color(0xFF10B981), Color(0xFF059669))
+                    ),
+                    shape = RoundedCornerShape(18.dp)
+                )
+                .border(
+                    3.dp,
+                    if (isDarkMode) Color(0xFF0B0F17) else Color(0xFFF8FAFC),
+                    RoundedCornerShape(18.dp)
+                )
+                .clickable(onClick = onFabClick),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "ثبت گزارش جدید",
+                tint = if (isDarkMode) Color.Black else Color.White,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun DockItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    isSelected: Boolean,
+    isDarkMode: Boolean,
+    onClick: () -> Unit,
+    testTag: String
+) {
+    val activeColor = if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669)
+    val activeBackground = if (isDarkMode) Color(0x2610B981) else Color(0x1A059669)
+    val inactiveColor = if (isDarkMode) Color(0xFF64748B) else Color(0xFF94A3B8)
+
+    Box(
+        modifier = Modifier
+            .height(50.dp)
+            .width(58.dp)
+            .background(
+                if (isSelected) activeBackground else Color.Transparent,
+                RoundedCornerShape(16.dp)
+            )
+            .clickable(onClick = onClick)
+            .testTag(testTag),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = if (isSelected) activeColor else inactiveColor,
+                modifier = Modifier.size(19.dp)
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = label,
+                fontSize = 10.sp,
+                fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
+                color = if (isSelected) activeColor else inactiveColor
             )
         }
     }
@@ -4067,24 +4236,22 @@ private fun formatGregorianToJalali(dateString: String): String {
         }
         
         var jm = 0
-        val leapRemainders = intArrayOf(1, 5, 9, 13, 17, 22, 26, 30)
-        while (jm < 12) {
-            val daysInMonth = if (jm == 11) {
-                val isLeap = (jy % 33) in leapRemainders
-                if (isLeap) 30 else 29
+        while (jm < 12 && jDayNo >= jDaysInMonth[jm]) {
+            if (jm == 11) {
+                val isLeap = (jy == 1403 || jy == 1407 || jy == 1411 || jy == 1399 || (jy - 1399) % 4 == 0)
+                val esfandDays = if (isLeap) 30 else 29
+                if (jDayNo >= esfandDays) {
+                    jDayNo -= esfandDays
+                    jm++
+                }
             } else {
-                jDaysInMonth[jm]
-            }
-            if (jDayNo >= daysInMonth) {
-                jDayNo -= daysInMonth
+                jDayNo -= jDaysInMonth[jm]
                 jm++
-            } else {
-                break
             }
         }
         
         val jd = jDayNo + 1
-        return toPersianDigits(String.format(java.util.Locale.US, "%04d/%02d/%02d", jy, jm + 1, jd))
+        return String.format("%04d/%02d/%02d", jy, jm + 1, jd)
     } catch (e: Exception) {
         return dateString
     }
@@ -4145,32 +4312,14 @@ fun ReportCardItem(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Surface(
-                        color = Color(0xFFFFFBEB),
-                        shape = RoundedCornerShape(6.dp),
-                        border = BorderStroke(1.dp, Color(0xFFFDE68A))
-                    ) {
-                        Text(
-                            text = "#${toPersianDigits(report.reportNumber.toString())}",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFFD97706),
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-                    Text(
-                        text = report.project.ifEmpty { "خط نهم سراسری عجب شیر-تبریز" },
-                        fontWeight = FontWeight.Bold,
-                        fontSize = if (viewMode == ReportViewMode.COMPACT) 13.sp else 15.sp,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                Text(
+                    text = report.project.ifEmpty { "پروژه کارگاه" },
+                    fontWeight = FontWeight.Bold,
+                    fontSize = if (viewMode == ReportViewMode.COMPACT) 13.sp else 15.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
                 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

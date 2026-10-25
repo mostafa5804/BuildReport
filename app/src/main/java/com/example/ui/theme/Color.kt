@@ -2,46 +2,106 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Modern Premium Enterprise 2026 Palette
-val DeepTeal = Color(0xFF00695C)        // Primary Deep Teal
-val Emerald = Color(0xFF00A884)         // Secondary Emerald
-val AmberAccent = Color(0xFFF4B400)     // Accent Amber
-val DesignBackground = Color(0xFFF8FAFB) // Premium light grey-blue background
-val DesignSurface = Color(0xFFFFFFFF)    // Pure White Surface
+// 2026 Crisp Luminescent Slate Light Palette
+val LightBgDeep = Color(0xFFF8FAFC)
+val LightBgSurface = Color(0xFFFFFFFF)
+val LightBgGlass = Color(0xFFFFFFFF)
+val LightBorderSubtle = Color(0xFFE2E8F0)
+val LightBorderStrong = Color(0xFFCBD5E1)
+val LightBorderHighlight = Color(0x7310B981)
 
-val DesignTextPrimary = Color(0xFF1F2937)   // Slate 800 (Text Primary)
-val DesignTextSecondary = Color(0xFF6B7280) // Slate 500 (Text Secondary)
+val LightAccentCyan = Color(0xFF0284C7)
+val LightAccentCyanBg = Color(0xFFE0F2FE)
+val LightAccentTeal = Color(0xFF059669)
+val LightAccentTealBg = Color(0xFFECFDF5)
+val LightAccentAmber = Color(0xFFD97706)
+val LightAccentAmberBg = Color(0xFFFEF3C7)
+val LightAccentRose = Color(0xFFE11D48)
+val LightAccentRoseBg = Color(0xFFFFE4E6)
+val LightAccentIndigo = Color(0xFF4F46E5)
+val LightAccentIndigoBg = Color(0xFFEEF2FF)
 
-val DesignSuccess = Color(0xFF16A34A)
-val DesignWarning = Color(0xFFF59E0B)
-val DesignError = Color(0xFFDC2626)
+val LightTextMain = Color(0xFF0F172A)
+val LightTextBody = Color(0xFF334155)
+val LightTextMuted = Color(0xFF64748B)
+val LightTextDim = Color(0xFF94A3B8)
 
-// Dark Theme Variants
-val DeepTealDark = Color(0xFF4DB6AC)
-val EmeraldDark = Color(0xFF4EF0C9)
-val AmberAccentDark = Color(0xFFFFD54F)
-val BackgroundDark = Color(0xFF0B111E)
-val SurfaceDark = Color(0xFF162032)
+// 2026 Dark Titanium Glass Palette
+val DarkBgDeep = Color(0xFF0B0F17)
+val DarkBgSurface = Color(0xFF131B2A)
+val DarkBgGlass = Color(0xFF162032)
+val DarkBorderSubtle = Color(0xFF1E293B)
+val DarkBorderStrong = Color(0xFF334155)
+val DarkBorderHighlight = Color(0x5910B981)
 
-// Map existing variables to keep backward compatibility and maintain layout consistency
-val MutedTealGreen = DeepTeal
-val MutedTealLight = Color(0xFFE0F2F1)
-val NaturalAmber = AmberAccent
-val LightAmberBg = Color(0xFFFFF8E1)
-val SoftTealBackground = DesignBackground
-val SoftWhiteSurface = DesignSurface
-val TextPrimary = DesignTextPrimary
-val TextSecondary = DesignTextSecondary
-val BorderColor = Color(0xFFE5E7EB)
+val DarkAccentCyan = Color(0xFF06B6D4)
+val DarkAccentCyanBg = Color(0x2606B6D4)
+val DarkAccentTeal = Color(0xFF10B981)
+val DarkAccentTealBg = Color(0x2610B981)
+val DarkAccentAmber = Color(0xFFF59E0B)
+val DarkAccentAmberBg = Color(0x26F59E0B)
+val DarkAccentRose = Color(0xFFF43F5E)
+val DarkAccentRoseBg = Color(0x26F43F5E)
+val DarkAccentIndigo = Color(0xFF6366F1)
+val DarkAccentIndigoBg = Color(0x266366F1)
 
-val PrimaryBlue = DeepTeal
-val PrimaryBlueDark = DeepTealDark
-val SecondaryAmber = AmberAccent
-val SecondaryAmberDark = AmberAccentDark
-val TertiaryEmerald = Emerald
-val BackgroundLight = SoftTealBackground
-val SurfaceLight = SoftWhiteSurface
+val DarkTextMain = Color(0xFFF1F5F9)
+val DarkTextBody = Color(0xFFCBD5E1)
+val DarkTextMuted = Color(0xFF94A3B8)
+val DarkTextDim = Color(0xFF64748B)
 
-val StatusDone = DesignSuccess
-val StatusPending = DesignWarning
-val StatusDelay = DesignError
+// Backward compatibility & semantic aliases
+val PrimaryDeep = LightAccentTeal
+val PrimaryEmerald = LightAccentTeal
+val PrimaryLight = LightAccentTealBg
+val PrimaryGlow = DarkAccentTeal
+val PrimaryEmeraldDark = DarkAccentTeal
+
+val AccentCyan = LightAccentCyan
+val AccentCyanLight = LightAccentCyanBg
+val AccentAmber = LightAccentAmber
+val AccentAmberLight = LightAccentAmberBg
+val AccentPurple = LightAccentIndigo
+val AccentPurpleLight = LightAccentIndigoBg
+val AccentRose = LightAccentRose
+val AccentRoseLight = LightAccentRoseBg
+
+val DesignBackground = LightBgDeep
+val DesignSurface = LightBgSurface
+val DesignBorder = LightBorderSubtle
+val DesignTextMain = LightTextMain
+val DesignTextBody = LightTextBody
+val DesignTextMuted = LightTextMuted
+
+val BackgroundDark = DarkBgDeep
+val SurfaceDark = DarkBgSurface
+
+val DeepTeal = LightAccentTeal
+val Emerald = LightAccentTeal
+val AmberAccent = LightAccentAmber
+val DesignTextPrimary = LightTextMain
+val DesignTextSecondary = LightTextMuted
+val DesignSuccess = LightAccentTeal
+val DesignWarning = LightAccentAmber
+val DesignError = LightAccentRose
+val MutedTealGreen = LightAccentTeal
+val MutedTealLight = LightAccentTealBg
+val NaturalAmber = LightAccentAmber
+val LightAmberBg = LightAccentAmberBg
+val SoftTealBackground = LightBgDeep
+val SoftWhiteSurface = LightBgSurface
+val TextPrimary = LightTextMain
+val TextSecondary = LightTextMuted
+val BorderColor = LightBorderSubtle
+val PrimaryBlue = LightAccentTeal
+val PrimaryBlueDark = DarkAccentTeal
+val SecondaryAmber = LightAccentAmber
+val SecondaryAmberDark = DarkAccentAmber
+val TertiaryEmerald = LightAccentTeal
+val BackgroundLight = LightBgDeep
+val SurfaceLight = LightBgSurface
+val StatusDone = LightAccentTeal
+val StatusPending = LightAccentAmber
+val StatusDelay = LightAccentRose
+
+

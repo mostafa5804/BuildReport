@@ -79,11 +79,16 @@ object PdfGenerator {
             </thead>
         """.trimIndent()
 
-        // Shared manpower rows helper
+        // Shared manpower rows helper with summary footer row
+        val activeManpowerList = report.manpower.filter { !it.isOnLeave }
+        val totalActiveManpower = activeManpowerList.sumOf { it.count }
+        val companyManpower = activeManpowerList.filter { it.employmentType == "COMPANY" }.sumOf { it.count }
+        val subcontractorManpower = activeManpowerList.filter { it.employmentType == "SUBCONTRACTOR" }.sumOf { it.count }
+
         val manpowerRows = if (report.manpower.isEmpty()) {
-            "<tr><td colspan='5' class='text-muted'>هیچ آمار نیروی کارگری ثبت نشده است</td></tr>"
+            "<tr><td colspan='5' class='text-muted'>هیچ آمار نیروی انسانی ثبت نشده است</td></tr>"
         } else {
-            report.manpower.mapIndexed { index, manpower ->
+            val rowsHtml = report.manpower.mapIndexed { index, manpower ->
                 val empTypeLabel = if (manpower.employmentType == "SUBCONTRACTOR") {
                     if (manpower.subcontractorName.isNotEmpty()) "پیمانکار: ${manpower.subcontractorName}" else "پیمانکار"
                 } else {
@@ -108,9 +113,20 @@ object PdfGenerator {
                 </tr>
                 """.trimIndent()
             }.joinToString("")
+
+            val summaryRowHtml = """
+                <tr style="background-color: #ecfdf5; font-weight: bold;">
+                    <td colspan="3" style="text-align: right; padding-right: 8px; color: #065f46;">جمع کل نفرات حاضر در این واحد:</td>
+                    <td style="color: #047857; font-size: 12px;">$totalActiveManpower نفر</td>
+                    <td style="text-align: right; padding-right: 8px; color: #065f46; font-size: 10.5px;">شرکتی: $companyManpower نفر | پیمانکاری: $subcontractorManpower نفر</td>
+                </tr>
+            """.trimIndent()
+
+            rowsHtml + summaryRowHtml
         }
 
         var bodyContentHtml = ""
+        var notesSectionNumber = "۵"
 
         when (rType) {
             "WAREHOUSE" -> {
@@ -248,9 +264,10 @@ object PdfGenerator {
                     }.joinToString("")
                 }
 
+                notesSectionNumber = "۴"
                 bodyContentHtml = """
                     <!-- 1. تحصیل اراضی -->
-                    <div class="section-title">۱. روند پیشرفت تحصیل اراضی، تملک املاک و معارضات ملکی</div>
+                    <div class="section-title">۱. روند پیشرفت تحصیل اراضی، تملک املاک و رفع معارضات ملکی</div>
                     <table class="report-table">
                         <thead>
                             <tr>
@@ -282,17 +299,8 @@ object PdfGenerator {
                         </tbody>
                     </table>
 
-                    <!-- 3. ماشین‌آلات -->
-                    <div class="section-title">۳. تجهیزات نقلیه و مهندسی واحد حقوقی و نقشه برداری معارضین</div>
-                    <table class="report-table">
-                        $machineryTableHeader
-                        <tbody>
-                            $machineryRows
-                        </tbody>
-                    </table>
-
-                    <!-- 4. نیروی انسانی -->
-                    <div class="section-title">۴. مشاورین، کارشناسان رسمی و پرسنل پیگیری حقوقی اراضی</div>
+                    <!-- 3. نیروی انسانی حقوقی -->
+                    <div class="section-title">۳. مشاورین، کارشناسان رسمی و پرسنل پیگیری حقوقی اراضی</div>
                     <table class="report-table">
                         $manpowerTableHeader
                         <tbody>
@@ -326,6 +334,7 @@ object PdfGenerator {
                     }.joinToString("")
                 }
 
+                notesSectionNumber = "۴"
                 bodyContentHtml = """
                     <!-- 1. کارهای انجام شده -->
                     <div class="section-title">۱. خلاصه آمار عملیات‌های نقشه‌برداری و شیت‌ها</div>
@@ -346,8 +355,8 @@ object PdfGenerator {
                         </tbody>
                     </table>
 
-                    <!-- 2. ماشین‌آلات -->
-                    <div class="section-title">۲. وضعیت دوربین‌ها، پهپادها، تجهیزات GPS و ماشین ابزار نقشه‌برداری</div>
+                    <!-- 2. تجهیزات نقشه‌برداری -->
+                    <div class="section-title">۲. وضعیت دوربین‌ها، پهپادها، تجهیزات GPS و ابزار نقشه‌برداری</div>
                     <table class="report-table">
                         $machineryTableHeader
                         <tbody>
@@ -356,7 +365,7 @@ object PdfGenerator {
                     </table>
 
                     <!-- 3. نیروی انسانی -->
-                    <div class="section-title">۳. آمار مهندسین نقشه‌بردار، کمک‌ نقشه‌برداران و میرداران حاضر در کارگاه</div>
+                    <div class="section-title">۳. آمار مهندسین نقشه‌بردار، کمک‌نقشه‌برداران و میرداران حاضر در کارگاه</div>
                     <table class="report-table">
                         $manpowerTableHeader
                         <tbody>
@@ -366,6 +375,7 @@ object PdfGenerator {
                 """.trimIndent()
             }
             "HSE" -> {
+                notesSectionNumber = "۴"
                 val tasksRows = if (report.tasks.isEmpty()) {
                     "<tr><td colspan='3' class='text-muted'>هیچ فعالیت ایمنی و بهداشت (HSE) در این تاریخ ثبت نشده است</td></tr>"
                 } else {
@@ -380,8 +390,8 @@ object PdfGenerator {
                     }.joinToString("")
                 }
 
-                val technicalMaterialsRows = if (report.materials.isEmpty()) {
-                    "<tr><td colspan='5' class='text-muted'>هیچ اقلام یا مصالح ایمنی برای این روز ثبت نشده است</td></tr>"
+                val hseMaterialsRows = if (report.materials.isEmpty()) {
+                    "<tr><td colspan='5' class='text-muted'>هیچ اقلام یا تجهیزات حفاظت فردی (PPE) برای این روز ثبت نشده است</td></tr>"
                 } else {
                     report.materials.mapIndexed { index, material ->
                         """
@@ -398,7 +408,7 @@ object PdfGenerator {
 
                 bodyContentHtml = """
                     <!-- 1. شرح فعالیت‌های ایمنی HSE -->
-                    <div class="section-title">۱. خلاصه شرح کار و فعالیت‌های واحد ایمنی و بهداشت (HSE) کارگاه</div>
+                    <div class="section-title">۱. خلاصه شرح کار، بازرسی‌ها و فعالیت‌های واحد ایمنی و بهداشت (HSE)</div>
                     <table class="report-table">
                         <thead>
                             <tr>
@@ -412,34 +422,25 @@ object PdfGenerator {
                         </tbody>
                     </table>
 
-                    <!-- 2. مصالح و تجهیزات ایمنی وارده -->
-                    <div class="section-title">۲. آمار ورود مصالح و تجهیزات حفاظتی و ایمنی به کارگاه</div>
+                    <!-- 2. تجهیزات حفاظت فردی PPE -->
+                    <div class="section-title">۲. آمار تحویل و کنترل تجهیزات حفاظتی و ایمنی (PPE) در کارگاه</div>
                     <table class="report-table">
                         <thead>
                             <tr>
                                 <th style="width: 5%;">ردیف</th>
-                                <th style="width: 35%;">نوع کالا/تجهیزات ایمنی وارده (مانند: کفش، کلاه، دستکش، علائم)</th>
-                                <th style="width: 15%;">مقدار</th>
+                                <th style="width: 35%;">نوع تجهیز ایمنی و حفاظتی (کفش، کلاه، هارنس، علائم، کپسول)</th>
+                                <th style="width: 15%;">تعداد / مقدار</th>
                                 <th style="width: 12%;">واحد</th>
-                                <th style="width: 33%;">توضیحات فرستنده و روال تامین</th>
+                                <th style="width: 33%;">توضیحات تحویل و وضعیت</th>
                             </tr>
                         </thead>
                         <tbody>
-                            $technicalMaterialsRows
+                            $hseMaterialsRows
                         </tbody>
                     </table>
 
-                    <!-- 3. ماشین‌آلات ایمنی -->
-                    <div class="section-title">۳. وضعیت تجهیزات ترابری، اطفای حریق و کمک‌های اولیه واحد ایمنی</div>
-                    <table class="report-table">
-                        $machineryTableHeader
-                        <tbody>
-                            $machineryRows
-                        </tbody>
-                    </table>
-
-                    <!-- 4. نیروی انسانی ایمنی -->
-                    <div class="section-title">۴. آمار افسران ایمنی، پزشک‌یار و پرسنل بخش HSE</div>
+                    <!-- 3. نیروی انسانی ایمنی -->
+                    <div class="section-title">۳. آمار افسران ایمنی، پزشک‌یار و پرسنل بخش HSE</div>
                     <table class="report-table">
                         $manpowerTableHeader
                         <tbody>
@@ -532,6 +533,7 @@ object PdfGenerator {
                 """.trimIndent()
             }
             "TECHNICAL" -> {
+                notesSectionNumber = "۳"
                 val tasksRows = if (report.tasks.isEmpty()) {
                     "<tr><td colspan='3' class='text-muted'>هیچ فعالیت دفتر فنی در این تاریخ ثبت نشده است</td></tr>"
                 } else {
@@ -541,22 +543,6 @@ object PdfGenerator {
                             <td class="cell-index">${index + 1}</td>
                             <td class="cell-main">${task.description}</td>
                             <td class="cell-desc">${task.comments.ifEmpty { "---" }}</td>
-                        </tr>
-                        """.trimIndent()
-                    }.joinToString("")
-                }
-
-                val technicalMaterialsRows = if (report.materials.isEmpty()) {
-                    "<tr><td colspan='5' class='text-muted'>هیچ مصالح تخصصی برای این روز ثبت نشده است</td></tr>"
-                } else {
-                    report.materials.mapIndexed { index, material ->
-                        """
-                        <tr>
-                            <td class="cell-index">${index + 1}</td>
-                            <td class="cell-main">${material.type}</td>
-                            <td>${material.quantity}</td>
-                            <td>${material.unit}</td>
-                            <td class="cell-desc">${material.comments.ifEmpty { "---" }}</td>
                         </tr>
                         """.trimIndent()
                     }.joinToString("")
@@ -578,34 +564,8 @@ object PdfGenerator {
                         </tbody>
                     </table>
 
-                    <!-- 2. مصالح تخصصی وارده -->
-                    <div class="section-title">۲. آمار ورود مصالح تخصصی و متریال خاص به کارگاه</div>
-                    <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 5%;">ردیف</th>
-                                <th style="width: 35%;">نوع مصالح/کالا تخصصی وارده</th>
-                                <th style="width: 15%;">مقدار</th>
-                                <th style="width: 12%;">واحد</th>
-                                <th style="width: 33%;">توضیحات واردات و فرستنده</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            $technicalMaterialsRows
-                        </tbody>
-                    </table>
-
-                    <!-- 3. ماشین‌آلات -->
-                    <div class="section-title">۳. وضعیت تجهیزات دفتری، آزمایشی و ترابری واحد فنی</div>
-                    <table class="report-table">
-                        $machineryTableHeader
-                        <tbody>
-                            $machineryRows
-                        </tbody>
-                    </table>
-
-                    <!-- 4. نیروی انسانی -->
-                    <div class="section-title">۴. آمار مهندسان، کارشناسان و پرسنل بخش دفتر فنی و کنترل پروژه</div>
+                    <!-- 2. نیروی انسانی دفتر فنی -->
+                    <div class="section-title">۲. آمار مهندسان، کارشناسان و پرسنل بخش دفتر فنی و کنترل پروژه</div>
                     <table class="report-table">
                         $manpowerTableHeader
                         <tbody>
@@ -711,8 +671,6 @@ object PdfGenerator {
             }
         }
 
-        val obstaclesSectionNumber = if (rType == "SURVEY") "۴" else "۵"
-
         return """
             <!DOCTYPE html>
             <html lang="fa" dir="rtl">
@@ -722,19 +680,20 @@ object PdfGenerator {
                 <style>
                     @font-face {
                         font-family: 'Vazir';
-                        src: url('font/vazirmatn.ttf') format('truetype'),
-                             url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Regular.woff2') format('woff2');
+                        src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Regular.woff2') format('woff2');
                     }
                     * {
                         box-sizing: border-box;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
                     }
                     body {
-                        font-family: 'Vazir', 'Tahoma', 'Arial', sans-serif;
+                        font-family: 'Vazir', 'Shabnam', 'Sahel', 'Tahoma', 'Arial', sans-serif;
                         direction: rtl;
-                        font-size: 13px;
+                        font-size: 12px;
                         color: #1f2937;
-                        line-height: 1.55;
-                        padding: 15px;
+                        line-height: 1.45;
+                        padding: 10px;
                         margin: 0;
                         background-color: #ffffff;
                     }
@@ -744,34 +703,36 @@ object PdfGenerator {
                     
                     /* Design Header Container with Steel borders / Industrial Accent */
                     .header-container {
-                        border: 2px solid #1e3a8a;
+                        border: 1.5px solid #1e3a8a;
                         border-radius: 6px;
-                        padding: 14px;
-                        margin-bottom: 12px;
+                        padding: 10px 14px;
+                        margin-bottom: 10px;
                         background-color: #f8fafc;
-                        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+                        page-break-inside: avoid;
                     }
                     .main-title {
-                        font-size: 19px;
+                        font-size: 17px;
                         font-weight: bold;
                         text-align: center;
                         color: #1e3a8a;
-                        margin: 0 0 8px 0;
-                        border-bottom: 2px solid #3b82f6;
-                        padding-bottom: 6px;
+                        margin: 0 0 6px 0;
+                        border-bottom: 1.5px solid #3b82f6;
+                        padding-bottom: 4px;
                     }
                     
                     /* Metadata grid - double column */
                     .meta-grid {
                         width: 100%;
                         border-collapse: collapse;
+                        table-layout: fixed;
                     }
                     .meta-grid td {
                         border: none;
-                        padding: 5px;
+                        padding: 3px 4px;
                         text-align: right;
-                        font-size: 13px;
+                        font-size: 11.5px;
                         color: #374151;
+                        word-break: break-word;
                     }
                     .meta-grid td strong {
                         color: #1e3a8a;
@@ -780,40 +741,53 @@ object PdfGenerator {
                     /* Section title header styles */
                     .section-title {
                         font-weight: bold;
-                        font-size: 14px;
+                        font-size: 12.5px;
                         color: #ffffff;
                         background-color: #0284c7; /* Sky Blue variant */
-                        padding: 6px 12px;
-                        margin-top: 16px;
-                        margin-bottom: 8px;
+                        padding: 4px 10px;
+                        margin-top: 10px;
+                        margin-bottom: 6px;
                         border-radius: 4px;
                         border-right: 4px solid #0369a1;
+                        page-break-after: avoid;
                     }
                     
-                    /* Elegant Industrial Grid Tables with rounded borders */
+                    /* Robust multi-page table layout */
                     table.report-table {
                         width: 100%;
                         border-collapse: collapse;
-                        margin-bottom: 14px;
+                        table-layout: fixed;
+                        margin-bottom: 10px;
+                        page-break-inside: auto;
+                    }
+                    thead {
+                        display: table-header-group;
+                    }
+                    tr {
+                        page-break-inside: avoid;
+                        page-break-after: auto;
                     }
                     table.report-table th, table.report-table td {
                         border: 1px solid #cbd5e1;
-                        padding: 6px 5px;
+                        padding: 5px 4px;
                         text-align: center;
-                        font-size: 12px;
+                        font-size: 11px;
+                        word-wrap: break-word;
+                        overflow-wrap: break-word;
+                        word-break: break-word;
                     }
                     table.report-table th {
-                        background-color: #f1f5f9;
-                        color: #1e3a8a;
+                        background-color: #e2e8f0;
+                        color: #0f172a;
                         font-weight: bold;
-                        border-bottom: 2px solid #94a3b8;
+                        border-bottom: 2px solid #64748b;
                     }
                     table.report-table tr:nth-child(even) {
                         background-color: #f8fafc;
                     }
                     .cell-main {
                         text-align: right !important;
-                        padding-right: 8px !important;
+                        padding-right: 6px !important;
                         font-weight: bold;
                         color: #0f172a;
                     }
@@ -824,50 +798,53 @@ object PdfGenerator {
                     }
                     .cell-highlight {
                         font-weight: bold;
-                        color: #2563eb;
+                        color: #0284c7;
                     }
                     .cell-desc {
                         text-align: right !important;
                         padding-right: 6px !important;
-                        font-size: 11.5px;
+                        font-size: 10.5px;
                         color: #475569;
                     }
                     .text-muted {
                         color: #94a3b8;
                         font-style: italic;
-                        padding: 10px !important;
+                        padding: 8px !important;
                     }
                     
                     /* Extra design elements for memos/notes */
                     .memo-container {
                         width: 100%;
-                        margin-top: 12px;
+                        margin-top: 8px;
+                        page-break-inside: avoid;
                     }
                     .memo-box {
                         border: 1px solid #cbd5e1;
-                        border-right: 5px solid #f59e0b; /* Safety amber */
+                        border-right: 4px solid #f59e0b; /* Safety amber */
                         border-radius: 4px;
-                        padding: 10px;
-                        margin-bottom: 10px;
+                        padding: 8px 10px;
+                        margin-bottom: 6px;
                         background-color: #fffbeb;
                     }
                     .memo-title {
                         font-weight: bold;
                         color: #b45309;
-                        margin-bottom: 4px;
-                        font-size: 12.5px;
+                        margin-bottom: 3px;
+                        font-size: 11.5px;
                     }
                     .memo-text {
                         color: #451a03;
                         white-space: pre-line;
-                        font-size: 11.5px;
+                        font-size: 11px;
+                        line-height: 1.4;
                     }
                     
                     /* Signatures footer modern grid with clear lines */
                     .footer-signatures {
-                        margin-top: 28px;
+                        margin-top: 16px;
                         width: 100%;
                         border-collapse: collapse;
+                        page-break-inside: avoid;
                     }
                     .footer-signatures td {
                         border: none;
@@ -875,26 +852,35 @@ object PdfGenerator {
                         text-align: center;
                         vertical-align: top;
                         font-weight: bold;
-                        padding: 8px;
-                        font-size: 13px;
+                        padding: 6px;
+                        font-size: 12px;
                         color: #1e3a8a;
                     }
                     .signature-line {
-                        margin-top: 24px;
+                        margin-top: 20px;
                         border-top: 1.5px dashed #3b82f6;
                         width: 140px;
                         margin-left: auto;
                         margin-right: auto;
                     }
                     .signature-subtitle {
-                        font-size: 11px;
+                        font-size: 10px;
                         color: #64748b;
-                        margin-top: 4px;
+                        margin-top: 3px;
                         font-weight: normal;
+                    }
+                    .app-badge-footer {
+                        text-align: center;
+                        font-size: 9.5px;
+                        color: #94a3b8;
+                        margin-top: 12px;
+                        border-top: 1px solid #e2e8f0;
+                        padding-top: 4px;
+                        page-break-inside: avoid;
                     }
 
                     /* =======================================================
-                       PRINT STYLING (A4 - Grayscale & fits exactly on 1 Page)
+                       PRINT STYLING (A4 - Crisp & Smart Multi-page Flow)
                        ======================================================= */
                     @media print {
                         @page {
@@ -905,60 +891,59 @@ object PdfGenerator {
                             padding: 0;
                             margin: 0;
                             font-size: 11px;
-                            line-height: 1.4;
+                            line-height: 1.35;
                             color: #000000 !important;
                             background-color: #ffffff !important;
-                            -webkit-print-color-adjust: exact;
-                            print-color-adjust: exact;
                         }
                         .header-container {
                             border: 1px solid #000000 !important;
                             border-radius: 4px !important;
                             background-color: #fbfbfb !important;
-                            padding: 10px !important;
-                            margin-bottom: 10px !important;
-                            box-shadow: none !important;
+                            padding: 8px !important;
+                            margin-bottom: 8px !important;
                         }
                         .main-title {
-                            font-size: 16px !important;
+                            font-size: 15px !important;
                             color: #000000 !important;
                             border-bottom: 1.2px solid #000000 !important;
-                            padding-bottom: 4px !important;
+                            padding-bottom: 3px !important;
                             margin-bottom: 4px !important;
                         }
                         .meta-grid td {
-                            font-size: 11px !important;
+                            font-size: 10.5px !important;
                             color: #000000 !important;
-                            padding: 3px 4px !important;
+                            padding: 2px 4px !important;
                         }
                         .meta-grid td strong {
                             color: #000000 !important;
                         }
                         .section-title {
-                            font-size: 12px !important;
-                            background-color: #0284c7 !important; /* Sky Blue variant for print as well */
+                            font-size: 11.5px !important;
+                            background-color: #0284c7 !important;
                             color: #ffffff !important;
-                            padding: 4px 6px !important;
-                            margin-top: 10px !important;
-                            margin-bottom: 6px !important;
+                            padding: 3px 6px !important;
+                            margin-top: 8px !important;
+                            margin-bottom: 5px !important;
                             border-radius: 2px !important;
+                            page-break-after: avoid !important;
                         }
                         table.report-table {
-                            margin-bottom: 10px !important;
-                            page-break-inside: avoid;
+                            margin-bottom: 8px !important;
+                            page-break-inside: auto !important;
                         }
                         table.report-table th, table.report-table td {
-                            padding: 4px 4px !important;
+                            padding: 3.5px 3px !important;
                             font-size: 10px !important;
                             border: 1px solid #000000 !important;
                         }
                         table.report-table th {
-                            background-color: #e0f2fe !important; /* Light sky blue background for table headers */
-                            color: #0369a1 !important; /* Dark blue text */
+                            background-color: #e0f2fe !important;
+                            color: #0369a1 !important;
                             border-bottom: 1.5px solid #0284c7 !important;
                         }
                         table.report-table tr {
                             background-color: #ffffff !important;
+                            page-break-inside: avoid !important;
                         }
                         .cell-highlight {
                             color: #000000 !important;
@@ -973,22 +958,22 @@ object PdfGenerator {
                         }
                         .cell-desc {
                             color: #000000 !important;
-                            font-size: 9.5px !important;
+                            font-size: 9px !important;
                         }
                         .memo-container {
-                            margin-top: 8px !important;
-                            page-break-inside: avoid;
+                            margin-top: 6px !important;
+                            page-break-inside: avoid !important;
                         }
                         .memo-box {
                             border: 1px solid #000000 !important;
                             border-right: 4px solid #000000 !important;
                             background-color: #ffffff !important;
-                            padding: 8px !important;
-                            margin-bottom: 6px !important;
+                            padding: 6px !important;
+                            margin-bottom: 4px !important;
                         }
                         .memo-title {
                             color: #000000 !important;
-                            font-size: 11px !important;
+                            font-size: 10.5px !important;
                             margin-bottom: 2px !important;
                         }
                         .memo-text {
@@ -996,36 +981,36 @@ object PdfGenerator {
                             font-size: 9.5px !important;
                         }
                         .footer-signatures {
-                            margin-top: 18px !important;
-                            page-break-inside: avoid;
+                            margin-top: 14px !important;
+                            page-break-inside: avoid !important;
                         }
                         .footer-signatures td {
-                            padding: 6px !important;
-                            font-size: 11px !important;
+                            padding: 4px !important;
+                            font-size: 10.5px !important;
                             color: #000000 !important;
                         }
                         .signature-line {
-                            margin-top: 18px !important;
+                            margin-top: 14px !important;
                             border-top: 1px dashed #000000 !important;
                             width: 120px !important;
                         }
+                    }
                     }
                 </style>
             </head>
             <body>
                 <div class="header-container">
-                    <div class="main-title">$mainReportTitle (شماره گزارش: #${report.reportNumber})</div>
+                    <div class="main-title">$mainReportTitle</div>
                     <table class="meta-grid">
                         <tr>
-                            <td style="width: 36%"><strong>نام پروژه:</strong> ${report.project.ifEmpty { "ثبت نشده" }}</td>
-                            <td style="width: 24%"><strong>واحد/بخش:</strong> ${report.section.ifEmpty { "بخش فنی" }}</td>
-                            <td style="width: 20%"><strong>شماره گزارش:</strong> #${report.reportNumber}</td>
-                            <td style="width: 20%"><strong>تاریخ گزارش:</strong> ${report.date.ifEmpty { "ثبت نشده" }}</td>
+                            <td style="width: 40%"><strong>نام پروژه:</strong> ${report.project.ifEmpty { "ثبت نشده" }}</td>
+                            <td style="width: 30%"><strong>واحد/بخش مربوطه:</strong> ${report.section.ifEmpty { "بخش فنی" }}</td>
+                            <td style="width: 30%"><strong>تاریخ گزارش:</strong> ${report.date.ifEmpty { "ثبت نشده" }}</td>
                         </tr>
                         <tr>
                             <td><strong>تهیه کننده گزارش:</strong> ${report.preparedBy.ifEmpty { "ثبت نشده" }}</td>
                             <td><strong>وضعیت جوی هوا:</strong> ${report.weather.ifEmpty { "آفتابی ☀️" }}</td>
-                            <td colspan="2">
+                            <td>
                                 <strong>محدوده کیلومتراژ:</strong> 
                                 ${if (report.startKm.isEmpty() && report.endKm.isEmpty()) "عمومی کارگاه" else "کیلومتر " + formatKmRangeHtml(report.startKm, report.endKm)}
                             </td>
@@ -1036,7 +1021,7 @@ object PdfGenerator {
                 $bodyContentHtml
 
                 <!-- موانع و مشکلات -->
-                <div class="section-title">$obstaclesSectionNumber. موانع، مشکلات کارگاهی و پیش‌بینی روز آینده</div>
+                <div class="section-title">$notesSectionNumber. موانع، مشکلات کارگاهی و پیش‌بینی روز آینده</div>
                 <div class="memo-container">
                     <div class="memo-box">
                         <div class="memo-title">⚠️ موانع، مشکلات، نواقص و حوادث کارگاهی:</div>
@@ -1053,21 +1038,25 @@ object PdfGenerator {
                 <table class="footer-signatures">
                     <tr>
                         <td>
-                            <strong style="font-size: 13px;">تهیه کننده: ${report.preparedBy.ifEmpty { "تنظیم کننده" }}</strong>
+                            <strong style="font-size: 12.5px;">تهیه کننده: ${report.preparedBy.ifEmpty { "تنظیم کننده" }}</strong>
                             ${if (signatureBase64.isNotEmpty()) """
-                                <div style="height: 75px; text-align: center; display: flex; align-items: center; justify-content: center; margin: 4px auto;">
-                                    <img src="data:image/png;base64,$signatureBase64" style="max-height: 70px; max-width: 170px; display: inline-block; mix-blend-mode: multiply;" />
+                                <div style="height: 65px; text-align: center; display: flex; align-items: center; justify-content: center; margin: 4px auto;">
+                                    <img src="data:image/png;base64,$signatureBase64" style="max-height: 60px; max-width: 160px; display: inline-block; mix-blend-mode: multiply;" />
                                 </div>
                             """ else """
                                 <div class="signature-line"></div>
                             """}
                         </td>
                         <td>
-                            <strong style="font-size: 13px;">تایید دفتر فنی و نظارت</strong>
+                            <strong style="font-size: 12.5px;">تایید دفتر فنی و نظارت</strong>
                             <div class="signature-line" style="margin-top: 35px;"></div>
                         </td>
                     </tr>
                 </table>
+
+                <div class="app-badge-footer">
+                    سامانه گزارش یار کارگاه • نگارش ۴.۱.۰ • تاریخ استخراج: ${report.date.ifEmpty { "---" }}
+                </div>
                 
                 ${generatePhotosPages(context, report, photos)}
             </body>
@@ -1078,59 +1067,68 @@ object PdfGenerator {
     private fun generatePhotosPages(context: Context, report: DailyReport, photos: List<com.example.data.model.DailyPhoto>): String {
         if (photos.isEmpty()) return ""
 
-        val pages = photos.take(4).chunked(4)
-        return pages.joinToString("") { pagePhotos ->
+        val pages = photos.chunked(4)
+        return pages.mapIndexed { pageIndex, pagePhotos ->
             val pageHtml = StringBuilder()
-            pageHtml.append("<div style=\"page-break-before: always; width: 100%; height: 96%; display: flex; flex-direction: column;\">")
-            
-            // Header for Photo Page
             pageHtml.append("""
-                <div class="header-container" style="margin-bottom: 20px; flex-shrink: 0;">
-                    <div class="main-title">پیوست تصاویر گزارش روزانه (شماره #${report.reportNumber})</div>
-                    <table class="meta-grid">
-                        <tr>
-                            <td><strong>پروژه:</strong> ${report.project.ifEmpty { "---" }}</td>
-                            <td><strong>واحد:</strong> ${report.section.ifEmpty { "---" }}</td>
-                            <td><strong>تاریخ:</strong> ${report.date.ifEmpty { "---" }}</td>
-                        </tr>
-                    </table>
-                </div>
+                <div style="page-break-before: always; page-break-inside: avoid; width: 100%; box-sizing: border-box; padding-top: 6px;">
+                    <!-- Header for Photo Page -->
+                    <div class="header-container" style="margin-bottom: 12px;">
+                        <div class="main-title">پیوست مستندات تصویری گزارش روزانه ${if (pages.size > 1) "(صفحه ${pageIndex + 1} از ${pages.size})" else ""}</div>
+                        <table class="meta-grid">
+                            <tr>
+                                <td style="width: 50%;"><strong>نام پروژه:</strong> ${report.project.ifEmpty { "ثبت نشده" }}</td>
+                                <td style="width: 50%;"><strong>تاریخ گزارش:</strong> ${report.date.ifEmpty { "ثبت نشده" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- Uniform 2x2 Photo Cards Grid -->
+                    <table style="width: 100%; border-collapse: separate; border-spacing: 10px; table-layout: fixed;">
             """.trimIndent())
 
-            val containerStyle = "display: grid; gap: 16px; flex-grow: 1; width: 100%; box-sizing: border-box;"
-            val gridTemplate = when (pagePhotos.size) {
-                1 -> "grid-template-columns: 1fr; grid-template-rows: 1fr;"
-                2 -> "grid-template-columns: 1fr; grid-template-rows: 1fr 1fr;"
-                3 -> "grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;"
-                else -> "grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;"
-            }
-            
-            pageHtml.append("<div style=\"$containerStyle $gridTemplate\">")
-            
-            pagePhotos.forEachIndexed { index, photo ->
-                val base64 = uriToBase64(context, photo.uri)
-                if (base64.isNotEmpty()) {
-                    val itemStyle = if (pagePhotos.size == 3 && index == 0) {
-                        "grid-column: 1 / 3; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px solid #cbd5e1; padding: 12px; border-radius: 8px; background-color: #f8fafc; overflow: hidden; box-sizing: border-box;"
+            // Render photos in pairs of 2 per row
+            val rows = pagePhotos.chunked(2)
+            rows.forEach { rowPhotos ->
+                pageHtml.append("<tr>")
+                rowPhotos.forEach { photo ->
+                    val base64 = uriToBase64(context, photo.uri)
+                    val photoTitle = photo.description.ifEmpty { "تصویر عملیات کارگاهی" }
+                    if (base64.isNotEmpty()) {
+                        pageHtml.append("""
+                            <td style="width: 50%; vertical-align: top; border: 1.5px solid #cbd5e1; border-radius: 8px; background-color: #f8fafc; padding: 6px; text-align: center;">
+                                <div style="width: 100%; height: 215px; display: flex; align-items: center; justify-content: center; background-color: #0f172a; border-radius: 6px; overflow: hidden; margin-bottom: 6px;">
+                                    <img src="$base64" style="max-width: 100%; max-height: 215px; width: auto; height: auto; object-fit: contain; display: block; margin: auto;" />
+                                </div>
+                                <div style="font-weight: bold; font-size: 11px; color: #1e3a8a; padding: 3px 4px; background: #e0f2fe; border-radius: 4px; border: 1px solid #bae6fd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    $photoTitle
+                                </div>
+                            </td>
+                        """.trimIndent())
                     } else {
-                        "display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px solid #cbd5e1; padding: 12px; border-radius: 8px; background-color: #f8fafc; overflow: hidden; box-sizing: border-box;"
+                        pageHtml.append("""
+                            <td style="width: 50%; vertical-align: top; border: 1.5px dashed #cbd5e1; border-radius: 8px; background-color: #f8fafc; padding: 12px; text-align: center; color: #94a3b8;">
+                                تصویر بارگذاری نشد
+                            </td>
+                        """.trimIndent())
                     }
-                    
-                    pageHtml.append("""
-                        <div style="$itemStyle">
-                            <div style="flex-grow: 1; width: 100%; height: calc(100% - 28px); display: flex; justify-content: center; align-items: center; overflow: hidden;">
-                                <img src="$base64" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px;" />
-                            </div>
-                            <div style="font-weight: bold; font-size: 14px; text-align: center; color: #1e3a8a; height: 20px; line-height: 20px; margin-top: 8px; flex-shrink: 0;">
-                                ${photo.description.ifEmpty { "بدون عنوان" }}
-                            </div>
-                        </div>
-                    """.trimIndent())
                 }
+                // If odd number of photos in the row, add an empty placeholder cell to maintain 50% width
+                if (rowPhotos.size == 1) {
+                    pageHtml.append("<td style=\"width: 50%; border: none; background: transparent;\"></td>")
+                }
+                pageHtml.append("</tr>")
             }
-            pageHtml.append("</div></div>")
+
+            pageHtml.append("""
+                    </table>
+                    <div class="app-badge-footer" style="margin-top: 14px;">
+                        سامانه گزارش یار کارگاه • نگارش ۴.۱.۰ • آلبوم مستندات تصویری
+                    </div>
+                </div>
+            """.trimIndent())
             pageHtml.toString()
-        }
+        }.joinToString("")
     }
 
     // Direct system share function
