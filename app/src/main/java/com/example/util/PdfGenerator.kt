@@ -680,7 +680,8 @@ object PdfGenerator {
                 <style>
                     @font-face {
                         font-family: 'Vazir';
-                        src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Regular.woff2') format('woff2');
+                        src: url('file:///android_res/font/vazirmatn.ttf') format('truetype'),
+                             url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Regular.woff2') format('woff2');
                     }
                     * {
                         box-sizing: border-box;
@@ -1000,7 +1001,7 @@ object PdfGenerator {
             </head>
             <body>
                 <div class="header-container">
-                    <div class="main-title">$mainReportTitle</div>
+                    <div class="main-title">$mainReportTitle ${if (report.reportNumber > 0) "— شماره #${report.reportNumber}" else ""}</div>
                     <table class="meta-grid">
                         <tr>
                             <td style="width: 40%"><strong>نام پروژه:</strong> ${report.project.ifEmpty { "ثبت نشده" }}</td>

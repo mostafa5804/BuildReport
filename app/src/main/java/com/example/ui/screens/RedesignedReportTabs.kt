@@ -65,10 +65,11 @@ fun PersianDatePickerDialog(
     onDateSelected: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val parts = initialDate.split("/")
-    var selectedYear by remember { mutableStateOf(if (parts.size == 3) parts[0].toIntOrNull() ?: 1403 else 1403) }
-    var selectedMonth by remember { mutableStateOf(if (parts.size == 3) parts[1].toIntOrNull() ?: 1 else 1) }
-    var selectedDay by remember { mutableStateOf(if (parts.size == 3) parts[2].toIntOrNull() ?: 1 else 1) }
+    val normalizedInitial = persianDigitsToEnglish(initialDate.trim())
+    val parts = normalizedInitial.split("/")
+    var selectedYear by remember { mutableStateOf(if (parts.size == 3) parts[0].toIntOrNull() ?: 1404 else 1404) }
+    var selectedMonth by remember { mutableStateOf((if (parts.size == 3) parts[1].toIntOrNull() ?: 1 else 1).coerceIn(1, 12)) }
+    var selectedDay by remember { mutableStateOf((if (parts.size == 3) parts[2].toIntOrNull() ?: 1 else 1).coerceIn(1, 31)) }
 
     var isMonthSelectionMode by remember { mutableStateOf(false) }
 
@@ -80,7 +81,8 @@ fun PersianDatePickerDialog(
     )
 
     fun isLeapYear(year: Int): Boolean {
-        return (year == 1403 || year == 1407 || year == 1411 || year == 1399 || (year - 1399) % 4 == 0)
+        val rem = ((year + 38) * 31) % 128
+        return rem < 31
     }
 
     fun getStartDayOfWeek(year: Int, month: Int): Int {
@@ -102,6 +104,9 @@ fun PersianDatePickerDialog(
 
     val jDaysInMonth = intArrayOf(31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, if (isLeapYear(selectedYear)) 30 else 29)
     val daysInCurrentMonth = jDaysInMonth[selectedMonth - 1]
+    if (selectedDay > daysInCurrentMonth) {
+        selectedDay = daysInCurrentMonth
+    }
     val startDay = getStartDayOfWeek(selectedYear, selectedMonth)
 
     Dialog(onDismissRequest = onDismiss) {
@@ -306,11 +311,64 @@ fun BaseInfoTabRedesigned(
                     color = Color(0xFF00695C)
                 )
 
-                Text(
-                    text = "بخش جاری: $unitLabel",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
+                // Project & Unit Summary Card
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "واحد گزارش: $unitLabel",
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "شماره گزارش: #${toPersianDigits(report.reportNumber)}",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFF00695C)
+                            )
+                        }
+                        if (report.project.isNotBlank()) {
+                            Text(
+                                text = "پروژه: ${report.project}",
+                                fontSize = 11.5.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (report.preparedBy.isNotBlank()) {
+                            Text(
+                                text = "تنظیم‌کننده: ${report.preparedBy}",
+                                fontSize = 11.5.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                // 0. Sequential Report Number field
+                OutlinedTextField(
+                    value = if (report.reportNumber > 0) report.reportNumber.toString() else "",
+                    onValueChange = { newNum ->
+                        val parsed = persianDigitsToEnglish(newNum).filter { it.isDigit() }.toIntOrNull() ?: 0
+                        viewModel.updateCurrentReport { it.copy(reportNumber = parsed) }
+                    },
+                    label = { Text("شماره گزارش (سریال خودکار)") },
+                    leadingIcon = { Icon(Icons.Default.Numbers, null, tint = MaterialTheme.colorScheme.primary) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    singleLine = true
                 )
 
                 // 1. Report Date with Quick Selection Buttons
@@ -1758,26 +1816,51 @@ fun ManpowerTabRedesigned(
                     singleLine = true
                 )
 
-                // 6. Vacation / Leave checkbox
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .clickable { isOnLeave = !isOnLeave }
-                        .padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Checkbox(
-                        checked = isOnLeave,
-                        onCheckedChange = { isOnLeave = it }
-                    )
+                // 6. Attendance / Leave Segmented Selector
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = "این فرد در مرخصی است ✈️ (بدون محاسبه در آمار فعالان)",
+                        text = "وضعیت حضور:",
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
+                        fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = !isOnLeave,
+                            onClick = { isOnLeave = false },
+                            label = {
+                                Text(
+                                    "حاضر در کارگاه ✅",
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Color(0xFFDCFCE7),
+                                selectedLabelColor = Color(0xFF166534)
+                            ),
+                            modifier = Modifier.weight(1f)
+                        )
+                        FilterChip(
+                            selected = isOnLeave,
+                            onClick = { isOnLeave = true },
+                            label = {
+                                Text(
+                                    "در مرخصی 🏖️",
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Color(0xFFFEE2E2),
+                                selectedLabelColor = Color(0xFF991B1B)
+                            ),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
 
                 // Large Submit Button
@@ -1936,15 +2019,28 @@ fun ManpowerTabRedesigned(
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             val typeLabel = if (item.employmentType == "COMPANY") "شرکتی (امانی)" else "پیمانکار"
                             Text("نوع استخدام: $typeLabel", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                             
-                            if (item.isOnLeave) {
-                                Text("وضعیت: در مرخصی ✈️", fontSize = 11.sp, color = Color(0xFFDC2626), fontWeight = FontWeight.Bold)
-                            } else {
-                                Text("وضعیت: حاضر در کارگاه ✅", fontSize = 11.sp, color = Color(0xFF16A34A), fontWeight = FontWeight.Bold)
+                            Surface(
+                                onClick = {
+                                    val updated = report.manpower.toMutableList()
+                                    updated[index] = item.copy(isOnLeave = !item.isOnLeave)
+                                    viewModel.updateCurrentReport { r -> r.copy(manpower = updated) }
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (item.isOnLeave) Color(0xFFFEE2E2) else Color(0xFFDCFCE7)
+                            ) {
+                                Text(
+                                    text = if (item.isOnLeave) "در مرخصی 🏖️ (تغییر)" else "حاضر در کارگاه ✅ (تغییر)",
+                                    fontSize = 10.5.sp,
+                                    color = if (item.isOnLeave) Color(0xFFDC2626) else Color(0xFF16A34A),
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                )
                             }
                         }
 

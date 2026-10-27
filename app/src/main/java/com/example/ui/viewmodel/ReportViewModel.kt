@@ -595,7 +595,7 @@ class ReportViewModel(
             putString("default_weather", weather)
             putString("default_start_km", startKm)
             putString("default_end_km", endKm)
-            putString("base_report_number", baseReportNumber.ifBlank { "100" })
+            putInt("base_report_number", baseReportNumber.filter { it.isDigit() }.toIntOrNull() ?: 100)
             apply()
         }
     }
