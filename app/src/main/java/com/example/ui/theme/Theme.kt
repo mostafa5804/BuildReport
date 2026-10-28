@@ -18,14 +18,14 @@ private val DarkColorScheme =
     tertiary = DarkAccentAmber,
     background = DarkBgDeep,
     surface = DarkBgSurface,
-    onPrimary = Color(0xFF000000),
+    onPrimary = Color.White,
     onSecondary = Color(0xFF000000),
     onTertiary = Color(0xFF000000),
     onBackground = DarkTextMain,
     onSurface = DarkTextMain,
     surfaceVariant = DarkBgGlass,
     onSurfaceVariant = DarkTextMuted,
-    primaryContainer = Color(0x3310B981),
+    primaryContainer = Color(0x333B82F6),
     onPrimaryContainer = DarkAccentTeal,
     outline = DarkBorderSubtle,
     outlineVariant = DarkBorderStrong
@@ -70,4 +70,3 @@ fun MyApplicationTheme(
 
   MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
 }
-

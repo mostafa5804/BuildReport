@@ -1,4 +1,4 @@
-package com.example.ui.screens
+﻿package com.example.ui.screens
 
 import android.content.Context
 import android.widget.Toast
@@ -308,7 +308,7 @@ fun BaseInfoTabRedesigned(
                     text = "مشخصات پایه گزارش روزانه 📋",
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
-                    color = Color(0xFF00695C)
+                    color = Color(0xFF1E3A8A)
                 )
 
                 // Project & Unit Summary Card
@@ -337,7 +337,7 @@ fun BaseInfoTabRedesigned(
                                 text = "شماره گزارش: #${toPersianDigits(report.reportNumber)}",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = Color(0xFF00695C)
+                                color = Color(0xFF1E3A8A)
                             )
                         }
                         if (report.project.isNotBlank()) {
@@ -422,8 +422,8 @@ fun BaseInfoTabRedesigned(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFE0F2F1),
-                        contentColor = Color(0xFF00695C)
+                        containerColor = Color(0xFFEFF6FF),
+                        contentColor = Color(0xFF1E3A8A)
                     )
                 ) {
                     Icon(Icons.Default.WbSunny, null, modifier = Modifier.size(18.dp))
@@ -442,7 +442,7 @@ fun BaseInfoTabRedesigned(
                 .fillMaxWidth()
                 .height(56.dp),
             shape = RoundedCornerShape(24.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00695C))
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A8A))
         ) {
             Text("ادامه به بخش فعالیت‌ها ➡️", fontWeight = FontWeight.Bold, fontSize = 14.sp)
         }
@@ -463,7 +463,7 @@ fun BaseInfoTabRedesigned(
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(opt, fontWeight = FontWeight.Bold, color = Color(0xFF00695C), fontSize = 14.sp)
+                            Text(opt, fontWeight = FontWeight.Bold, color = Color(0xFF1E3A8A), fontSize = 14.sp)
                         }
                     }
                 }

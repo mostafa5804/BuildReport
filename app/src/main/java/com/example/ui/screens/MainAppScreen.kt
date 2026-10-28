@@ -172,13 +172,13 @@ fun ActivityItemCard(
             Box(
                 modifier = Modifier
                     .size(48.dp)
-                    .background(Color(0xFFE0F2F1), CircleShape),
+                    .background(Color(0xFFEFF6FF), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Description,
                     contentDescription = null,
-                    tint = Color(0xFF00695C),
+                    tint = Color(0xFF1E3A8A),
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -197,7 +197,7 @@ fun ActivityItemCard(
                         text = unit,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
-                        color = Color(0xFF00695C)
+                        color = Color(0xFF1E3A8A)
                     )
                     Text(
                         text = toPersianDigits(date),
@@ -260,7 +260,11 @@ fun ProjectDashboardTab(
     
     // Weather States
     val weatherEnabled = remember(backupRestored) { viewModel.sharedPreferences.getBoolean("weather_enabled", true) }
-    val cityName = remember(backupRestored) { viewModel.sharedPreferences.getString("weather_city_name", "") ?: "" }
+    val vmCityName by viewModel.weatherCityName.collectAsStateWithLifecycle()
+    val savedCityName = remember(backupRestored, vmCityName) {
+        viewModel.sharedPreferences.getString("weather_city_name", "")?.trim() ?: ""
+    }
+    val cityName = if (vmCityName.isNotBlank()) vmCityName else savedCityName
     
     val currentWeather by viewModel.currentWeather.collectAsStateWithLifecycle()
     val dailyForecast by viewModel.dailyForecast.collectAsStateWithLifecycle()
@@ -268,9 +272,8 @@ fun ProjectDashboardTab(
     
     var showForecastDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        val autoUpdate = viewModel.sharedPreferences.getBoolean("weather_auto_update", true)
-        if (weatherEnabled && autoUpdate) {
+    LaunchedEffect(cityName, weatherEnabled) {
+        if (weatherEnabled && cityName.isNotBlank()) {
             viewModel.fetchWeatherIfNeeded(forceRefresh = false)
         }
     }
@@ -511,7 +514,7 @@ fun ProjectDashboardTab(
                                     .fillMaxWidth()
                                     .background(
                                         brush = Brush.linearGradient(
-                                            colors = listOf(Color(0xFF10B981), Color(0xFF059669))
+                                            colors = listOf(Color(0xFF3B82F6), Color(0xFF2563EB))
                                         ),
                                         shape = RoundedCornerShape(16.dp)
                                     )
@@ -565,12 +568,21 @@ fun ProjectDashboardTab(
             Spacer(modifier = Modifier.height(14.dp))
 
             // 3. Sleek Compact Live Weather Card (Open-Meteo Integration)
-            if (weatherEnabled && cityName.isNotEmpty()) {
+            if (weatherEnabled) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 18.dp)
-                        .clickable { showForecastDialog = true },
+                        .clickable {
+                            if (cityName.isEmpty()) {
+                                onViewSettingsTab()
+                            } else {
+                                if (dailyForecast == null) {
+                                    viewModel.fetchWeatherIfNeeded(forceRefresh = true)
+                                }
+                                showForecastDialog = true
+                            }
+                        },
                     shape = RoundedCornerShape(22.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
@@ -592,18 +604,18 @@ fun ProjectDashboardTab(
                                 modifier = Modifier
                                     .size(46.dp)
                                     .background(
-                                        Color(0xFFF59E0B).copy(alpha = 0.14f),
+                                        Color(0xFF2563EB).copy(alpha = 0.12f),
                                         RoundedCornerShape(15.dp)
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
-                                if (isWeatherLoading && currentWeather == null) {
+                                if (cityName.isNotEmpty() && isWeatherLoading && currentWeather == null) {
                                     CircularProgressIndicator(
                                         modifier = Modifier.size(22.dp),
                                         strokeWidth = 2.dp,
-                                        color = Color(0xFFF59E0B)
+                                        color = Color(0xFF2563EB)
                                     )
-                                } else if (currentWeather != null) {
+                                } else if (cityName.isNotEmpty() && currentWeather != null) {
                                     val code = dailyForecast?.weatherCode?.firstOrNull() ?: currentWeather!!.weatherCode
                                     val (wIcon, _) = com.example.weather.WeatherRepository.getWeatherCodeInfo(code, currentWeather!!.isDay == 1)
                                     Text(text = wIcon, fontSize = 24.sp)
@@ -614,13 +626,19 @@ fun ProjectDashboardTab(
 
                             Column {
                                 Text(
-                                    text = "ایستگاه کارگاه ($cityName)",
+                                    text = if (cityName.isNotEmpty()) "ایستگاه کارگاه ($cityName)" else "ایستگاه آب و هوای کارگاه",
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Spacer(modifier = Modifier.height(3.dp))
-                                if (currentWeather != null) {
+                                if (cityName.isEmpty()) {
+                                    Text(
+                                        text = "برای نمایش وضعیت جوی، شهر کارگاه را در تنظیمات انتخاب کنید",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                } else if (currentWeather != null) {
                                     val code = dailyForecast?.weatherCode?.firstOrNull() ?: currentWeather!!.weatherCode
                                     val (_, wDesc) = com.example.weather.WeatherRepository.getWeatherCodeInfo(code, currentWeather!!.isDay == 1)
                                     val wind = toPersianDigits(currentWeather!!.windSpeed.toInt())
@@ -631,7 +649,7 @@ fun ProjectDashboardTab(
                                     )
                                 } else {
                                     Text(
-                                        text = "در حال دریافت اطلاعات اقلیمی...",
+                                        text = if (isWeatherLoading) "در حال دریافت اطلاعات اقلیمی..." else "برای بروزرسانی وضعیت جوی لمس کنید",
                                         fontSize = 11.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -640,20 +658,20 @@ fun ProjectDashboardTab(
                         }
 
                         Column(horizontalAlignment = Alignment.End) {
-                            if (currentWeather != null) {
+                            if (cityName.isNotEmpty() && currentWeather != null) {
                                 val temp = toPersianDigits(currentWeather!!.temperature.toInt())
                                 Text(
                                     text = "$temp°C",
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.Black,
-                                    color = Color(0xFF3B82F6)
+                                    color = Color(0xFF2563EB)
                                 )
                             }
                             Text(
-                                text = "پیش‌بینی ۷ روزه ←",
+                                text = if (cityName.isNotEmpty()) "پیش‌بینی ۷ روزه ←" else "انتخاب شهر ←",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = Color(0xFF2563EB)
                             )
                         }
                     }
@@ -726,7 +744,7 @@ fun ProjectDashboardTab(
                             Icon(
                                 imageVector = Icons.Default.Description,
                                 contentDescription = null,
-                                tint = if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669),
+                                tint = if (isDarkMode) Color(0xFF60A5FA) else Color(0xFF1E3A8A),
                                 modifier = Modifier.size(16.dp)
                             )
                             Text(
@@ -752,14 +770,14 @@ fun ProjectDashboardTab(
                             Icon(
                                 imageVector = Icons.Default.FolderOpen,
                                 contentDescription = null,
-                                tint = if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669),
+                                tint = if (isDarkMode) Color(0xFF60A5FA) else Color(0xFF1E3A8A),
                                 modifier = Modifier.size(14.dp)
                             )
                             Text(
                                 text = "مشاهده آرشیو گزارش‌ها",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669)
+                                color = if (isDarkMode) Color(0xFF60A5FA) else Color(0xFF1E3A8A)
                             )
                         }
                     }
@@ -896,17 +914,21 @@ fun ProjectDashboardTab(
         }
 
         // 7-day Weather Forecast Dialog
-        if (showForecastDialog && dailyForecast != null) {
+        if (showForecastDialog) {
+            val activeForecast = dailyForecast ?: com.example.weather.WeatherRepository.generateFallbackForecast(35.6892, 51.3890).daily!!
+            val dayLabels = listOf("امروز", "فردا", "۲ روز دیگر", "۳ روز دیگر", "۴ روز دیگر", "۵ روز دیگر", "۶ روز دیگر")
             AlertDialog(
                 onDismissRequest = { showForecastDialog = false },
                 title = {
-                    Text(
-                        text = "پیش‌بینی ۷ روزه آب و هوای کارگاه",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = if (cityName.isNotEmpty()) "پیش‌بینی ۷ روزه آب و هوا ($cityName)" else "پیش‌بینی ۷ روزه آب و هوای کارگاه",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 15.sp,
+                            color = Color(0xFF1E3A8A),
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 },
                 text = {
                     Column(
@@ -915,14 +937,15 @@ fun ProjectDashboardTab(
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        val dates = dailyForecast!!.time
-                        val minTemps = dailyForecast!!.minTemp
-                        val maxTemps = dailyForecast!!.maxTemp
-                        val codes = dailyForecast!!.weatherCode
+                        val dates = activeForecast.time
+                        val minTemps = activeForecast.minTemp
+                        val maxTemps = activeForecast.maxTemp
+                        val codes = activeForecast.weatherCode
                         
                         dates.forEachIndexed { i, d ->
                             if (i < minTemps.size && i < maxTemps.size && i < codes.size) {
                                 val (icon, desc) = com.example.weather.WeatherRepository.getWeatherCodeInfo(codes[i], isDay = true)
+                                val dayLabel = dayLabels.getOrElse(i) { toPersianDigits(d) }
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
@@ -932,17 +955,25 @@ fun ProjectDashboardTab(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(12.dp),
+                                            .padding(horizontal = 12.dp, vertical = 10.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(toPersianDigits(d), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        Column {
+                                            Text(dayLabel, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF0F172A))
+                                            Text(toPersianDigits(d), fontSize = 10.sp, color = Color(0xFF64748B))
+                                        }
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text(icon, fontSize = 18.sp)
                                             Spacer(modifier = Modifier.width(4.dp))
-                                            Text(desc, fontSize = 11.sp, color = Color(0xFF64748B))
+                                            Text(desc, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Color(0xFF334155))
                                         }
-                                        Text("${minTemps[i].toInt()}° / ${maxTemps[i].toInt()}°", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        Text(
+                                            text = "${toPersianDigits(minTemps[i].toInt())}° / ${toPersianDigits(maxTemps[i].toInt())}°C",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = Color(0xFF2563EB)
+                                        )
                                     }
                                 }
                             }
@@ -952,10 +983,11 @@ fun ProjectDashboardTab(
                 confirmButton = {
                     Button(
                         onClick = { showForecastDialog = false },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
-                        shape = RoundedCornerShape(12.dp)
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A8A)),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("بستن پنجره", fontWeight = FontWeight.Bold)
+                        Text("بستن پنجره", fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 },
                 shape = RoundedCornerShape(20.dp),
@@ -998,8 +1030,8 @@ fun ProjectDashboardTab(
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669),
-                                    contentColor = if (isDarkMode) Color.Black else Color.White
+                                    containerColor = if (isDarkMode) Color(0xFF2563EB) else Color(0xFF1E3A8A),
+                                    contentColor = Color.White
                                 ),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
@@ -1014,7 +1046,7 @@ fun ProjectDashboardTab(
                         onClick = { showCreateReportDialog = false },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("انصراف", color = if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669), fontWeight = FontWeight.Bold)
+                        Text("انصراف", color = if (isDarkMode) Color(0xFF60A5FA) else Color(0xFF1E3A8A), fontWeight = FontWeight.Bold)
                     }
                 },
                 shape = RoundedCornerShape(22.dp),
@@ -1072,8 +1104,8 @@ fun DashboardKpiCard(
 @Composable
 fun ReportCategoryChart(reports: List<DailyReport>, customUnitTitle: String) {
     val categories = listOf(
-        Triple("EXECUTION", "اجرا", Color(0xFF00695C)),
-        Triple("WAREHOUSE", "انبار", Color(0xFF00A884)),
+        Triple("EXECUTION", "اجرا", Color(0xFF1E3A8A)),
+        Triple("WAREHOUSE", "انبار", Color(0xFF2563EB)),
         Triple("TECHNICAL", "دفتر فنی", Color(0xFF3B82F6)),
         Triple("LEGAL", "حقوقی", Color(0xFF8B5CF6)),
         Triple("SURVEY", "نقشه", Color(0xFFEC4899)),
@@ -1375,7 +1407,7 @@ fun ProjectSettingsTab(
                         modifier = Modifier
                             .size(56.dp)
                             .background(Color.Transparent, RoundedCornerShape(12.dp))
-                            .border(1.dp, Color(0xFF00695C), RoundedCornerShape(12.dp)),
+                            .border(1.dp, Color(0xFF1E3A8A), RoundedCornerShape(12.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -1479,40 +1511,72 @@ fun ProjectSettingsTab(
                             }
                             
                             AnimatedVisibility(visible = weatherEnabled) {
-                                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                                     var searchQuery by remember { mutableStateOf(weatherCityName) }
                                     var searchResults by remember { mutableStateOf<List<com.example.weather.GeocodingResult>>(emptyList()) }
                                     var isSearching by remember { mutableStateOf(false) }
+                                    var showSettingsForecastDialog by remember { mutableStateOf(false) }
                                     val coroutineScope = rememberCoroutineScope()
-                                    
+                                    val settingsDailyForecast by viewModel.dailyForecast.collectAsStateWithLifecycle()
+                                    val settingsCurrentWeather by viewModel.currentWeather.collectAsStateWithLifecycle()
+
+                                    val selectCityAndPersist: (com.example.weather.GeocodingResult) -> Unit = { city ->
+                                        val selectedName = city.name
+                                        weatherCityName = selectedName
+                                        searchQuery = selectedName
+                                        weatherLatitude = city.latitude.toFloat()
+                                        weatherLongitude = city.longitude.toFloat()
+                                        searchResults = emptyList()
+                                        viewModel.sharedPreferences.edit()
+                                            .putString("weather_city_name", weatherCityName)
+                                            .putFloat("weather_latitude", weatherLatitude)
+                                            .putFloat("weather_longitude", weatherLongitude)
+                                            .putBoolean("weather_enabled", weatherEnabled)
+                                            .apply()
+                                        viewModel.fetchWeatherIfNeeded(forceRefresh = true)
+                                        focusManager.clearFocus()
+                                        Toast.makeText(context, "شهر $weatherCityName انتخاب شد 🌤️", Toast.LENGTH_SHORT).show()
+                                    }
+
                                     OutlinedTextField(
                                         value = searchQuery,
-                                        onValueChange = { 
-                                            searchQuery = it
-                                            coroutineScope.launch {
-                                                if (it.length > 2) {
-                                                    isSearching = true
-                                                    try {
-                                                        val results = com.example.weather.WeatherRepository.searchCity(it)
-                                                        searchResults = results ?: emptyList()
-                                                    } catch (e: Exception) {
-                                                        searchResults = emptyList()
-                                                    } finally {
-                                                        isSearching = false
+                                        onValueChange = { query ->
+                                            searchQuery = query
+                                            val trimmed = query.trim()
+                                            if (trimmed.isNotEmpty()) {
+                                                // Instant 0ms local search so dropdown reacts immediately on first keystroke
+                                                searchResults = com.example.weather.WeatherRepository.searchLocalCities(trimmed)
+                                                coroutineScope.launch {
+                                                    if (trimmed.length >= 2) {
+                                                        isSearching = true
+                                                        try {
+                                                            val remoteAndLocal = com.example.weather.WeatherRepository.searchCity(trimmed)
+                                                            if (searchQuery.trim() == trimmed) {
+                                                                searchResults = remoteAndLocal
+                                                            }
+                                                        } catch (_: Exception) {
+                                                        } finally {
+                                                            isSearching = false
+                                                        }
                                                     }
-                                                } else {
-                                                    searchResults = emptyList()
                                                 }
+                                            } else {
+                                                searchResults = emptyList()
+                                                isSearching = false
                                             }
                                         },
-                                        label = { Text("نام شهر (فارسی یا انگلیسی)", fontSize = 12.sp) },
+                                        label = { Text("جستجو یا تایپ نام شهر (مثلاً تهران، شیراز، عسلویه...)", fontSize = 12.sp) },
                                         modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true,
                                         shape = RoundedCornerShape(16.dp),
                                         trailingIcon = {
                                             if (isSearching) {
                                                 CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                                             } else if (searchQuery.isNotEmpty()) {
-                                                IconButton(onClick = { searchQuery = ""; searchResults = emptyList() }) {
+                                                IconButton(onClick = {
+                                                    searchQuery = ""
+                                                    searchResults = emptyList()
+                                                }) {
                                                     Icon(Icons.Default.Close, contentDescription = "پاک کردن")
                                                 }
                                             } else {
@@ -1524,46 +1588,234 @@ fun ProjectSettingsTab(
                                             unfocusedLabelColor = Color.Gray
                                         )
                                     )
-                                    
+
+                                    // Search Results Dropdown IMMEDIATELY below the text field
                                     AnimatedVisibility(visible = searchResults.isNotEmpty()) {
                                         Card(
-                                            modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp),
+                                            modifier = Modifier.fillMaxWidth(),
                                             shape = RoundedCornerShape(12.dp),
-                                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                                            border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
                                         ) {
-                                            LazyColumn {
-                                                items(searchResults.size) { index ->
-                                                    val city = searchResults[index]
-                                                    Column(
+                                            Column(modifier = Modifier.fillMaxWidth()) {
+                                                searchResults.take(8).forEachIndexed { index, city ->
+                                                    Row(
                                                         modifier = Modifier
                                                             .fillMaxWidth()
-                                                            .clickable {
-                                                                weatherCityName = city.name ?: ""
-                                                                searchQuery = weatherCityName
-                                                                weatherLatitude = city.latitude?.toFloat() ?: 0f
-                                                                weatherLongitude = city.longitude?.toFloat() ?: 0f
-                                                                searchResults = emptyList()
-                                                            }
-                                                            .padding(12.dp)
+                                                            .clickable { selectCityAndPersist(city) }
+                                                            .padding(horizontal = 14.dp, vertical = 11.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.SpaceBetween
                                                     ) {
-                                                        Text(city.name ?: "", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                                        Text("${city.admin1 ?: ""} - ${city.country ?: ""}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                        Column {
+                                                            Text(city.name, fontWeight = FontWeight.ExtraBold, fontSize = 13.5.sp, color = MaterialTheme.colorScheme.onSurface)
+                                                            Text("${city.admin1 ?: ""} • ${city.country ?: "ایران"}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                        }
+                                                        Text("انتخاب شهر ←", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                                     }
-                                                    if (index < searchResults.size - 1) {
+                                                    if (index < minOf(searchResults.size, 8) - 1) {
                                                         HorizontalDivider(modifier = Modifier.padding(horizontal = 12.dp))
                                                     }
                                                 }
                                             }
                                         }
                                     }
+
+                                    // Quick Popular Iranian Cities for 1-Tap Selection
+                                    Text(
+                                        text = "انتخاب سریع شهرهای منتخب:",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    val quickCities = listOf("تهران", "مشهد", "اصفهان", "شیراز", "تبریز", "اهواز", "بندرعباس", "عسلویه", "رشت", "کرمان", "ساری", "یزد")
+                                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        quickCities.chunked(4).forEach { rowCities ->
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                rowCities.forEach { quickName ->
+                                                    val isSelectedCity = weatherCityName == quickName
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .weight(1f)
+                                                            .background(
+                                                                if (isSelectedCity) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                                                                RoundedCornerShape(10.dp)
+                                                            )
+                                                            .border(
+                                                                1.dp,
+                                                                if (isSelectedCity) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                                                                RoundedCornerShape(10.dp)
+                                                            )
+                                                            .clickable {
+                                                                com.example.weather.WeatherRepository.findCityByName(quickName)?.let { matched ->
+                                                                    selectCityAndPersist(matched)
+                                                                }
+                                                            }
+                                                            .padding(vertical = 8.dp),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Text(
+                                                            text = quickName,
+                                                            fontSize = 11.sp,
+                                                            fontWeight = if (isSelectedCity) FontWeight.ExtraBold else FontWeight.Medium,
+                                                            color = if (isSelectedCity) Color.White else MaterialTheme.colorScheme.onSurface
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Interactive 7-day Forecast Button & Live Status Card inside Settings
+                                    if (weatherCityName.isNotEmpty()) {
+                                        Card(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    viewModel.fetchWeatherIfNeeded(forceRefresh = false)
+                                                    showSettingsForecastDialog = true
+                                                },
+                                            shape = RoundedCornerShape(14.dp),
+                                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)),
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Column {
+                                                    Text(
+                                                        text = "شهر انتخاب‌شده: $weatherCityName",
+                                                        fontSize = 13.sp,
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                    val tempStr = settingsCurrentWeather?.let { "${toPersianDigits(it.temperature.toInt())}°C" } ?: "آماده نمایش"
+                                                    Text(
+                                                        text = "دمای فعلی: $tempStr • برای مشاهده پیش‌بینی ۷ روزه لمس کنید",
+                                                        fontSize = 11.sp,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                                Text(
+                                                    text = "پیش‌بینی ۷ روزه ←",
+                                                    fontSize = 11.5.sp,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        }
+                                    }
                                     
                                     Row(
-                                        modifier = Modifier.fillMaxWidth(),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                if (weatherCityName.isNotEmpty()) {
+                                                    viewModel.fetchWeatherIfNeeded(forceRefresh = false)
+                                                    showSettingsForecastDialog = true
+                                                } else {
+                                                    Toast.makeText(context, "ابتدا یک شهر را از لیست بالا انتخاب کنید", Toast.LENGTH_SHORT).show()
+                                                }
+                                            },
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Text("پیش‌بینی ۷ روزه", fontSize = 14.sp)
+                                        Text(
+                                            text = if (weatherCityName.isNotEmpty()) "پیش‌بینی ۷ روزه (لمس برای مشاهده)" else "پیش‌بینی ۷ روزه",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
                                         Switch(checked = weatherForecastEnabled, onCheckedChange = { weatherForecastEnabled = it })
+                                    }
+
+                                    if (showSettingsForecastDialog) {
+                                        val activeForecast = settingsDailyForecast
+                                            ?: com.example.weather.WeatherRepository.generateFallbackForecast(
+                                                if (weatherLatitude != 0f) weatherLatitude.toDouble() else 35.6892,
+                                                if (weatherLongitude != 0f) weatherLongitude.toDouble() else 51.3890
+                                            ).daily!!
+                                        val dayLabels = listOf("امروز", "فردا", "۲ روز دیگر", "۳ روز دیگر", "۴ روز دیگر", "۵ روز دیگر", "۶ روز دیگر")
+                                        AlertDialog(
+                                            onDismissRequest = { showSettingsForecastDialog = false },
+                                            title = {
+                                                Text(
+                                                    text = "پیش‌بینی ۷ روزه آب و هوا ($weatherCityName)",
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    fontSize = 15.sp,
+                                                    color = Color(0xFF1E3A8A),
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    textAlign = TextAlign.Center
+                                                )
+                                            },
+                                            text = {
+                                                Column(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .verticalScroll(rememberScrollState()),
+                                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                    val dates = activeForecast.time
+                                                    val minTemps = activeForecast.minTemp
+                                                    val maxTemps = activeForecast.maxTemp
+                                                    val codes = activeForecast.weatherCode
+                                                    dates.forEachIndexed { i, d ->
+                                                        if (i < minTemps.size && i < maxTemps.size && i < codes.size) {
+                                                            val (icon, desc) = com.example.weather.WeatherRepository.getWeatherCodeInfo(codes[i], isDay = true)
+                                                            val dayLabel = dayLabels.getOrElse(i) { toPersianDigits(d) }
+                                                            Card(
+                                                                modifier = Modifier.fillMaxWidth(),
+                                                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
+                                                                shape = RoundedCornerShape(12.dp),
+                                                                border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+                                                            ) {
+                                                                Row(
+                                                                    modifier = Modifier
+                                                                        .fillMaxWidth()
+                                                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                                    verticalAlignment = Alignment.CenterVertically
+                                                                ) {
+                                                                    Column {
+                                                                        Text(dayLabel, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF0F172A))
+                                                                        Text(toPersianDigits(d), fontSize = 10.sp, color = Color(0xFF64748B))
+                                                                    }
+                                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                                        Text(icon, fontSize = 18.sp)
+                                                                        Spacer(modifier = Modifier.width(4.dp))
+                                                                        Text(desc, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Color(0xFF334155))
+                                                                    }
+                                                                    Text(
+                                                                        text = "${toPersianDigits(minTemps[i].toInt())}° / ${toPersianDigits(maxTemps[i].toInt())}°C",
+                                                                        fontSize = 12.sp,
+                                                                        fontWeight = FontWeight.Black,
+                                                                        color = Color(0xFF2563EB)
+                                                                    )
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            confirmButton = {
+                                                Button(
+                                                    onClick = { showSettingsForecastDialog = false },
+                                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A8A)),
+                                                    shape = RoundedCornerShape(12.dp),
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    Text("بستن پنجره", fontWeight = FontWeight.Bold, color = Color.White)
+                                                }
+                                            },
+                                            shape = RoundedCornerShape(20.dp),
+                                            containerColor = Color.White
+                                        )
                                     }
                                     
                                     Row(
@@ -1749,7 +2001,7 @@ fun ProjectSettingsTab(
                         ) {
                             Button(
                                 onClick = { showSignaturePadDialog = true },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00695C)),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A8A)),
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.weight(1f)
                             ) {
@@ -1788,7 +2040,7 @@ fun ProjectSettingsTab(
                                     }
                                 },
                                 modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00695C)),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A8A)),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
                                 Text("پشتیبان‌گیری (JSON)", fontSize = 11.sp)
@@ -1803,7 +2055,7 @@ fun ProjectSettingsTab(
                                     }
                                 },
                                 modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00695C)),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A8A)),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
                                 Text("بازیابی اطلاعات", fontSize = 11.sp)
@@ -1817,6 +2069,14 @@ fun ProjectSettingsTab(
                 // Bottom Full-width save button
                 Button(
                     onClick = {
+                        if (weatherCityName.isNotBlank()) {
+                            val matchedCity = com.example.weather.WeatherRepository.findCityByName(weatherCityName)
+                            if (matchedCity != null) {
+                                weatherCityName = matchedCity.name ?: weatherCityName
+                                weatherLatitude = matchedCity.latitude?.toFloat() ?: weatherLatitude
+                                weatherLongitude = matchedCity.longitude?.toFloat() ?: weatherLongitude
+                            }
+                        }
                         viewModel.sharedPreferences.edit()
                             .putString("default_project", defaultProject)
                             .putString("default_section", defaultSection)
@@ -1833,6 +2093,10 @@ fun ProjectSettingsTab(
                             .putBoolean("weather_forecast_enabled", weatherForecastEnabled)
                             .putBoolean("weather_auto_update", weatherAutoUpdate)
                             .apply()
+
+                        if (weatherEnabled && weatherCityName.isNotBlank()) {
+                            viewModel.fetchWeatherIfNeeded(forceRefresh = true)
+                        }
 
                         Toast.makeText(context, "تنظیمات با موفقیت ذخیره و نهایی شد ✅", Toast.LENGTH_SHORT).show()
                         focusManager.clearFocus()
@@ -2101,7 +2365,7 @@ fun AboutAppTab(viewModel: ReportViewModel) {
                 .height(290.dp)
                 .background(
                     brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                        colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
+                        colors = listOf(Color(0xFF1E3A8A), Color(0xFF0F172A))
                     ),
                     shape = WaveShape()
                 )
@@ -2652,7 +2916,7 @@ fun getReportTypeInfo(type: String, customUnitTitle: String): Pair<String, Color
         "TECHNICAL" -> "دفتر فنی 📐" to Color(0xFF2563EB)
         "HSE" -> "ایمنی HSE 🛡️" to Color(0xFFDC2626)
         "CUSTOM" -> customUnitTitle to Color(0xFF4B5563)
-        else -> "اجرایی 🔨" to Color(0xFF059669)
+        else -> "اجرایی 🔨" to Color(0xFF1E3A8A)
     }
 }
 
@@ -3625,7 +3889,7 @@ fun WarehouseMaterialsTab(viewModel: ReportViewModel, report: DailyReport) {
                                     text = if (ledgerItem.isExit) "سند خروجی کالا (حواله انبار)" else "سند ورودی کالا (رسید انبار)",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (ledgerItem.isExit) MaterialTheme.colorScheme.error else Color(0xFF059669)
+                                    color = if (ledgerItem.isExit) MaterialTheme.colorScheme.error else Color(0xFF1E3A8A)
                                 )
                             }
                         }
@@ -3809,8 +4073,8 @@ fun MainAppScreen(
                                     },
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669),
-                                        contentColor = if (isDarkMode) Color.Black else Color.White
+                                        containerColor = if (isDarkMode) Color(0xFF2563EB) else Color(0xFF1E3A8A),
+                                        contentColor = Color.White
                                     ),
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
@@ -3825,7 +4089,7 @@ fun MainAppScreen(
                             onClick = { showGlobalCreateDialog = false },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("انصراف", color = if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669), fontWeight = FontWeight.Bold)
+                            Text("انصراف", color = if (isDarkMode) Color(0xFF60A5FA) else Color(0xFF1E3A8A), fontWeight = FontWeight.Bold)
                         }
                     },
                     shape = RoundedCornerShape(22.dp),
@@ -3860,7 +4124,7 @@ fun FuturisticFloatingDock(
             color = if (isDarkMode) Color(0xF0131B2A) else Color(0xEBFFFFFF),
             border = BorderStroke(
                 1.dp, 
-                if (isDarkMode) Color(0x4D10B981) else Color(0x3310B981)
+                if (isDarkMode) Color(0x4D3B82F6) else Color(0x331E3A8A)
             ),
             shadowElevation = 14.dp
         ) {
@@ -3922,10 +4186,10 @@ fun FuturisticFloatingDock(
                 .align(Alignment.TopCenter)
                 .offset(y = (-15).dp)
                 .size(52.dp)
-                .shadow(12.dp, RoundedCornerShape(18.dp), spotColor = Color(0xFF10B981))
+                .shadow(12.dp, RoundedCornerShape(18.dp), spotColor = Color(0xFF2563EB))
                 .background(
                     brush = Brush.linearGradient(
-                        colors = listOf(Color(0xFF10B981), Color(0xFF059669))
+                        colors = listOf(Color(0xFF3B82F6), Color(0xFF2563EB))
                     ),
                     shape = RoundedCornerShape(18.dp)
                 )
@@ -3940,7 +4204,7 @@ fun FuturisticFloatingDock(
             Icon(
                 imageVector = Icons.Default.Add,
                 contentDescription = "ثبت گزارش جدید",
-                tint = if (isDarkMode) Color.Black else Color.White,
+                tint = Color.White,
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -3956,8 +4220,8 @@ private fun DockItem(
     onClick: () -> Unit,
     testTag: String
 ) {
-    val activeColor = if (isDarkMode) Color(0xFF10B981) else Color(0xFF059669)
-    val activeBackground = if (isDarkMode) Color(0x2610B981) else Color(0x1A059669)
+    val activeColor = if (isDarkMode) Color(0xFF60A5FA) else Color(0xFF1E3A8A)
+    val activeBackground = if (isDarkMode) Color(0x263B82F6) else Color(0x1A1E3A8A)
     val inactiveColor = if (isDarkMode) Color(0xFF64748B) else Color(0xFF94A3B8)
 
     Box(

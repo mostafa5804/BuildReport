@@ -2,18 +2,18 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// 2026 Crisp Luminescent Slate Light Palette
+// 2026 Crisp Luminescent Slate Light Palette (Royal Blue Primary Theme)
 val LightBgDeep = Color(0xFFF8FAFC)
 val LightBgSurface = Color(0xFFFFFFFF)
 val LightBgGlass = Color(0xFFFFFFFF)
 val LightBorderSubtle = Color(0xFFE2E8F0)
 val LightBorderStrong = Color(0xFFCBD5E1)
-val LightBorderHighlight = Color(0x7310B981)
+val LightBorderHighlight = Color(0x732563EB)
 
 val LightAccentCyan = Color(0xFF0284C7)
 val LightAccentCyanBg = Color(0xFFE0F2FE)
-val LightAccentTeal = Color(0xFF059669)
-val LightAccentTealBg = Color(0xFFECFDF5)
+val LightAccentTeal = Color(0xFF1E3A8A)
+val LightAccentTealBg = Color(0xFFEFF6FF)
 val LightAccentAmber = Color(0xFFD97706)
 val LightAccentAmberBg = Color(0xFFFEF3C7)
 val LightAccentRose = Color(0xFFE11D48)
@@ -26,18 +26,18 @@ val LightTextBody = Color(0xFF334155)
 val LightTextMuted = Color(0xFF64748B)
 val LightTextDim = Color(0xFF94A3B8)
 
-// 2026 Dark Titanium Glass Palette
+// 2026 Dark Titanium Glass Palette (Royal Blue Primary Theme)
 val DarkBgDeep = Color(0xFF0B0F17)
 val DarkBgSurface = Color(0xFF131B2A)
 val DarkBgGlass = Color(0xFF162032)
 val DarkBorderSubtle = Color(0xFF1E293B)
 val DarkBorderStrong = Color(0xFF334155)
-val DarkBorderHighlight = Color(0x5910B981)
+val DarkBorderHighlight = Color(0x593B82F6)
 
 val DarkAccentCyan = Color(0xFF06B6D4)
 val DarkAccentCyanBg = Color(0x2606B6D4)
-val DarkAccentTeal = Color(0xFF10B981)
-val DarkAccentTealBg = Color(0x2610B981)
+val DarkAccentTeal = Color(0xFF3B82F6)
+val DarkAccentTealBg = Color(0x263B82F6)
 val DarkAccentAmber = Color(0xFFF59E0B)
 val DarkAccentAmberBg = Color(0x26F59E0B)
 val DarkAccentRose = Color(0xFFF43F5E)
@@ -103,5 +103,3 @@ val SurfaceLight = LightBgSurface
 val StatusDone = LightAccentTeal
 val StatusPending = LightAccentAmber
 val StatusDelay = LightAccentRose
-
-

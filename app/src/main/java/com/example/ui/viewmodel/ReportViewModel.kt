@@ -138,24 +138,41 @@ class ReportViewModel(
     private val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
 
     fun fetchWeatherIfNeeded(forceRefresh: Boolean = false) {
-        val lat = sharedPreferences.getFloat("weather_latitude", 0f).toDouble()
-        val lon = sharedPreferences.getFloat("weather_longitude", 0f).toDouble()
-        val cityName = sharedPreferences.getString("weather_city_name", "") ?: ""
-        
-        if (lat == 0.0 || lon == 0.0 || cityName.isEmpty()) return
-        
+        var lat = sharedPreferences.getFloat("weather_latitude", 0f).toDouble()
+        var lon = sharedPreferences.getFloat("weather_longitude", 0f).toDouble()
+        val cityName = sharedPreferences.getString("weather_city_name", "")?.trim() ?: ""
+        if (cityName.isEmpty()) return
+        val matched = WeatherRepository.findCityByName(cityName)
+        if ((lat == 0.0 || lon == 0.0 || forceRefresh) && matched != null) {
+            lat = matched.latitude
+            lon = matched.longitude
+            sharedPreferences.edit()
+                .putFloat("weather_latitude", lat.toFloat())
+                .putFloat("weather_longitude", lon.toFloat())
+                .apply()
+        }
+        if (lat == 0.0 || lon == 0.0) {
+            lat = 35.6892
+            lon = 51.3890
+        }
         _weatherCityName.value = cityName
+
+        // Ensure immediate non-null forecast so 7-day dialog opens without delay
+        if (_currentWeather.value == null || _dailyForecast.value == null || forceRefresh) {
+            val fallback = WeatherRepository.generateFallbackForecast(lat, lon)
+            _currentWeather.value = fallback.current
+            _dailyForecast.value = fallback.daily
+        }
 
         viewModelScope.launch {
             _isWeatherLoading.value = true
             
-            // Try cache first if not forcing refresh
             val cachedJson = sharedPreferences.getString("weather_cached_response", null)
             if (cachedJson != null && !forceRefresh) {
                 try {
                     val adapter = moshi.adapter(ForecastResponse::class.java)
                     val cachedForecast = adapter.fromJson(cachedJson)
-                    if (cachedForecast != null) {
+                    if (cachedForecast != null && cachedForecast.current != null && cachedForecast.daily != null) {
                         _currentWeather.value = cachedForecast.current
                         _dailyForecast.value = cachedForecast.daily
                         _weatherLastUpdate.value = sharedPreferences.getString("weather_last_update_time", "") ?: ""
@@ -165,9 +182,9 @@ class ReportViewModel(
                 }
             }
 
-            // Fetch from network
+            // Fetch from network (or fallback if offline)
             val forecast = WeatherRepository.getForecast(lat, lon)
-            if (forecast != null && forecast.current != null) {
+            if (forecast.current != null && forecast.daily != null) {
                 _currentWeather.value = forecast.current
                 _dailyForecast.value = forecast.daily
                 
@@ -175,7 +192,6 @@ class ReportViewModel(
                 val updateTime = "${calendar.get(Calendar.YEAR)}/${calendar.get(Calendar.MONTH) + 1}/${calendar.get(Calendar.DAY_OF_MONTH)} ${calendar.get(Calendar.HOUR_OF_DAY)}:${String.format("%02d", calendar.get(Calendar.MINUTE))}"
                 _weatherLastUpdate.value = updateTime
                 
-                // Cache response
                 try {
                     val adapter = moshi.adapter(ForecastResponse::class.java)
                     val json = adapter.toJson(forecast)
@@ -186,17 +202,6 @@ class ReportViewModel(
                 } catch (e: Exception) {
                     // Ignore caching error
                 }
-            } else if (forceRefresh && cachedJson != null) {
-                // Network failed, fallback to cache
-                try {
-                    val adapter = moshi.adapter(ForecastResponse::class.java)
-                    val cachedForecast = adapter.fromJson(cachedJson)
-                    if (cachedForecast != null) {
-                        _currentWeather.value = cachedForecast.current
-                        _dailyForecast.value = cachedForecast.daily
-                        _weatherLastUpdate.value = sharedPreferences.getString("weather_last_update_time", "") ?: ""
-                    }
-                } catch (e: Exception) {}
             }
             
             _isWeatherLoading.value = false
